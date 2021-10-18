@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Head tag -->
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="keyword"  content="">
+    <link rel="shortcut icon" href="/img/ironman-draw.png">
+    <!-- Place this tag in your head or just before your close body tag. -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+    <title>
+        
+          基于 Openresty cosocket 实现 memcached 服务 - 技术博客 go
+        
+    </title>
+
+    <link rel="canonical" href="http://example.com/2019/07/25/openresty-cosocket扩展memcached服务/">
+
+    <!-- Bootstrap Core CSS -->
+
+   
+<link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.4.1/css/bootstrap.min.css">
+
+
+    
+
+    <!-- Custom CSS --> 
+    
+<link rel="stylesheet" href="/css/beantech.min.css">
+
+
+    
+<link rel="stylesheet" href="/css/donate.css">
+
+	
+<link rel="stylesheet" href="/css/w3.css">
+
+    <!-- Pygments Highlight CSS -->
+    
+<link rel="stylesheet" href="/css/highlight.css">
+
+
+    
+<link rel="stylesheet" href="/css/widget.css">
+
+
+    
+<link rel="stylesheet" href="/css/rocket.css">
+
+
+    
+<link rel="stylesheet" href="/css/signature.css">
+
+
+    
+<link rel="stylesheet" href="/css/toc.css">
+
+
+    <!-- Custom Fonts -->
+    <!-- <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="https://cdn.staticfile.org/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+
+    <!-- Hux Delete, sad but pending in China
+    <link href='http://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/
+    css'>
+    -->
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+	
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+	<!-- Modified by Yu-Hsuan Yen -->
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+    }
+   .post-heading{
+    padding:20px;
+    }
+  .person {
+    border: 10px solid transparent;
+    margin-bottom: 25px;
+    width: 80%;
+    height: 80%;
+    opacity: 0.7;
+  }
+  .person:hover {
+    border-color: #f1f1f1;
+  }
+
+</style>
+
+<header id="headerid" class="w3-indigo intro-header" style="position:relative;">
+    <!-- Signature -->
+	
+        <div class="container">
+            <div class=" row" >
+			
+			<canvas id="particles-js-canvas" style="position:absolute;z-index:1;top:0px;left:0px;" width="100%" height="50%"></canvas>
+			
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1" style="z-index:2;">
+                
+                    <div class="post-heading" style="padding:40px">
+                        <div class="tags">
+                            
+                              <a class="tag" href="/tags/#openresty" title="openresty">openresty</a>
+                            
+                              <a class="tag" href="/tags/#cosocket" title="cosocket">cosocket</a>
+                            
+                              <a class="tag" href="/tags/#memcached" title="memcached">memcached</a>
+                            
+                        </div>
+                        <h1>基于 Openresty cosocket 实现 memcached 服务</h1>
+                        <h2 class="subheading"></h2>
+                        <span class="meta">
+                            Posted by tandd on
+                            2019-07-25
+                        </span>
+                    </div>
+                
+                </div>
+            </div>
+        </div>
+  
+</header>
+
+	
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Hexo</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <!-- Known Issue, found by Hux:
+            <nav>'s height woule be hold on by its content.
+            so, when navbar scale out, the <nav> will cover tags.
+            also mask any touch event of tags, unfortunately.
+        -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a  href="/">Homepage</a>
+                    </li>
+		    
+                    
+
+                        
+                        <li>
+           
+                            <a  href="#">menu1</a>
+                           
+                        </li>
+                        
+                    
+
+                        
+                        <li>
+           
+                            <a  href="#">menu2</a>
+                           
+                        </li>
+                        
+                    
+
+                        
+                        <li>
+           
+                            <a  href="#">menu3</a>
+                           
+                        </li>
+                        
+                    
+
+                        
+                        <li>
+           
+                            <a  href="#">menu3</a>
+                           
+                        </li>
+                        
+                    
+
+                        
+                        <li>
+           
+                            <a  href="#">menu5</a>
+                           
+                        </li>
+                        
+                    
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    $toggle.addEventListener('click', handleMagic)
+    function handleMagic(e){
+        if ($navbar.className.indexOf('in') > 0) {
+        // CLOSE
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        }else{
+        // OPEN
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+</script>
+
+
+    <!-- Main Content -->
+    <!-- Modify by Yu-Hsuan Yen -->
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+            <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+                <p>本文主要记录和总结。在学习了极客时间 openresty 课程(第三章 cosocket, 实现Memcached Server), 实践过程中碰到的问题。</p>
+<h3 id="1-Openresty-Cosocket-基础"><a href="#1-Openresty-Cosocket-基础" class="headerlink" title="1. Openresty Cosocket 基础"></a>1. Openresty Cosocket 基础</h3><p><strong>cosocket:</strong> cosocket 是 OpenResty 中的专有名词，是把协程和网络套接字的英文拼在一起形成的，即 cosocket = coroutine + socket。<br>cosocket 使我们可以实现整真意义上的同步非阻塞编程，是各种 lua-resty-* 非阻塞库的基础.</p>
+<p><code>注: 我们可以通过 cosocket 实现四层网络流量的处理。极大的极高的灵活性</code><br>TCP 相关的 cosocket API 可以分为下面这几类。</p>
+<table>
+<thead>
+<tr>
+<th>操作名称</th>
+<th>函数名</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>创建对象</td>
+<td>ngx.socket.tcp</td>
+</tr>
+<tr>
+<td>设置超时</td>
+<td>tcpsock:settimeout 和 tcpsock:settimeouts</td>
+</tr>
+<tr>
+<td>建立连接</td>
+<td>tcpsock:connect</td>
+</tr>
+<tr>
+<td>发送数据</td>
+<td>tcpsock:receive、tcpsock:receiveany 和 tcpsock:receiveuntil</td>
+</tr>
+<tr>
+<td>连接池</td>
+<td>tcpsock:setkeepalive</td>
+</tr>
+<tr>
+<td>关闭连接</td>
+<td>tcpsock:close</td>
+</tr>
+</tbody></table>
+<p>我自己理解， cosocket 网络读写事件的处理流程:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">1. luajit 协程发起 socket 函数调用</span><br><span class="line">   1. 注册网络事件 &amp;&amp;  设置事件回调函数</span><br><span class="line">      1. 将事件添加到 nginx 的网络事件处理循环中。</span><br><span class="line">      2. 设置网络事件的回调的处理函数。</span><br><span class="line">   2. luajit 协程 yield，让出执行权。</span><br><span class="line"></span><br><span class="line">2. luajit 协程 唤醒 &amp;&amp; 执行回调</span><br><span class="line">   1. luajit 协程唤醒</span><br><span class="line">      1. nginx 事件循环，发生对应事件后通知luajit </span><br><span class="line">      2. luajit 唤醒阻塞在这个事件上的协程并执行</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>使用 openresty 模拟 memcached 服务器, openresty 直接处理四层的请求流量，解析请求体。</p>
+<h3 id="2-基于-Openresty-cosocket-实现-memcached-服务"><a href="#2-基于-Openresty-cosocket-实现-memcached-服务" class="headerlink" title="2. 基于 Openresty cosocket 实现 memcached 服务"></a>2. 基于 Openresty cosocket 实现 memcached 服务</h3><h4 id="2-1-nginx-conf-配置"><a href="#2-1-nginx-conf-配置" class="headerlink" title="2.1 nginx conf 配置"></a>2.1 nginx conf 配置</h4><p>在nginx conf 的 stream block 内新增如下配置:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">stream &#123;</span><br><span class="line">    lua_code_cache off; </span><br><span class="line">    lua_package_path &quot;$prefix/lua/?.lua;;&quot;;</span><br><span class="line">    lua_shared_dict memcached 100m;</span><br><span class="line">    server &#123;</span><br><span class="line">        listen 11212;</span><br><span class="line">        content_by_lua_block &#123;</span><br><span class="line">            local m = require(&quot;resty.memcached.server&quot;)</span><br><span class="line">            m.run()</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>改动点如下:</p>
+<ol>
+<li>lua_code_cache 关闭。</li>
+<li>lua_shared_dict 设置 共享字典</li>
+<li>添加处理的 lua_block</li>
+</ol>
+<h4 id="2-2-测试驱动开发"><a href="#2-2-测试驱动开发" class="headerlink" title="2.2 测试驱动开发"></a>2.2 测试驱动开发</h4><p>使用 resty.memcached 的库, 测试保证兼容性</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">resty -e &#x27;local memcached = require &quot;resty.memcached&quot;</span><br><span class="line">    local memc, err = memcached:new()</span><br><span class="line"> </span><br><span class="line">    memc:set_timeout(10000) -- 1 sec</span><br><span class="line">    local ok, err = memc:connect(&quot;127.0.0.1&quot;, 11212)</span><br><span class="line">    if not ok then</span><br><span class="line">        ngx.say(&quot;failed to connection to memcached server: &quot;, err)</span><br><span class="line">        return </span><br><span class="line">    end</span><br><span class="line"></span><br><span class="line">    local ok, err = memc:set(&quot;dog&quot;, 33)</span><br><span class="line">    if not ok then</span><br><span class="line">        ngx.say(&quot;failed to set dog: &quot;, err)</span><br><span class="line">        return</span><br><span class="line">    end</span><br><span class="line">    ngx.say(&quot;set dog val&quot;, 33, &quot;ok: &quot;, ok)</span><br><span class="line"></span><br><span class="line">    local res, flags, err = memc:get(&quot;dog&quot;)</span><br><span class="line">    ngx.say(&quot;dog: &quot;, res, &quot;\n flags: &quot;, flags, &quot;\n err:&quot;, err)&#x27;</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-3-实现-tcp-网络处理流程-amp-amp-memcached-协议解析"><a href="#2-3-实现-tcp-网络处理流程-amp-amp-memcached-协议解析" class="headerlink" title="2.3 实现 tcp 网络处理流程 &amp;&amp; memcached 协议解析"></a>2.3 实现 tcp 网络处理流程 &amp;&amp; memcached 协议解析</h4><p><strong>tcp 接收网络请求处理逻辑:</strong> </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">function _M.run()</span><br><span class="line">    local tcpsock = assert(ngx.req.socket(true))</span><br><span class="line">    while true do</span><br><span class="line">        tcpsock:settimeout(60000) -- 60 s</span><br><span class="line">        local data, err = tcpsock:receive(&quot;*l&quot;)  -- 此处是指收到一行完整的指令 ?</span><br><span class="line">        if err then</span><br><span class="line">            ngx.log(ngx.ERR, &quot;tcpsock recv err:&quot; .. err)</span><br><span class="line">            return</span><br><span class="line">        end</span><br><span class="line">        ngx.log(ngx.ERR, &quot;recv time loop 1 data: &quot;, data, &quot;err :&quot;, err, &quot;\n&quot;)</span><br><span class="line"></span><br><span class="line">        -- 协议解析</span><br><span class="line">        -- 命令执行</span><br><span class="line">    end</span><br><span class="line">    -- ngx.say(&quot;running from mechched&quot;)</span><br><span class="line">end</span><br></pre></td></tr></table></figure>
+
+<p><strong>memcached 指令处理流程如下:</strong></p>
+<ol>
+<li>解析请求命令参数</li>
+<li>执行命令(get/set) 指令</li>
+<li>写响应<br>具体代码如下:<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line">-- 1. memcache 协议参数解析</span><br><span class="line">local function parse_args(s, start)</span><br><span class="line">    local arr = &#123;&#125;</span><br><span class="line">    ngx.log(ngx.ERR, &quot;parse_args data: &quot;, s, &quot; start pos: &quot;, start, &quot;\n&quot;)</span><br><span class="line">    while true do</span><br><span class="line">        local from, to, err = re_find(s, [[\S+]], &quot;jo&quot;, &#123;pos = start&#125;)</span><br><span class="line">        if not from then</span><br><span class="line">            break</span><br><span class="line">        end</span><br><span class="line">        ngx.log(ngx.ERR, &quot;parse_args add elem: &quot;,  str_sub(s, from, to))</span><br><span class="line">        table.insert( arr,  str_sub(s, from, to) )</span><br><span class="line">        start = to + 1</span><br><span class="line">    end</span><br><span class="line">    return arr</span><br><span class="line">end</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">-- 2. 执行 memcache get 请求</span><br><span class="line">function _M.get(tcpsock, keys)</span><br><span class="line">    local reply = &quot;&quot;</span><br><span class="line"> </span><br><span class="line">    for i = 1, #keys do</span><br><span class="line">        local key = keys[i]</span><br><span class="line">        local value, flags = mc_shdict:get(key)</span><br><span class="line">        if value then</span><br><span class="line">            ngx.log(ngx.ERR, &quot;get key: &quot;, key, &quot; value: &quot;, value, &quot;\n&quot;)</span><br><span class="line">            local flags  = flags or 0</span><br><span class="line">            -- reply = reply .. &quot;VALUE&quot; .. key .. &quot; &quot; .. flags .. &quot; &quot; .. #value .. &quot;\r\n&quot; .. value .. &quot;\r\n&quot;</span><br><span class="line">            reply = reply .. &quot;VALUE&quot; .. &quot; &quot; .. key .. &quot; &quot; .. flags .. &quot; &quot; .. #value  .. &quot;\r\n&quot;  .. value .. &quot;\r\n&quot;</span><br><span class="line"></span><br><span class="line">        end</span><br><span class="line">    end</span><br><span class="line">    reply = reply ..  &quot;END\r\n&quot;</span><br><span class="line"> </span><br><span class="line">end</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">-- 2. 执行memcache set 请求</span><br><span class="line">function _M.set(tcpsock, res)</span><br><span class="line">    local reply = &quot;&quot;</span><br><span class="line">    local key = res[1]</span><br><span class="line">    local flags = tonumber(res[2])</span><br><span class="line">    local exptime = tonumber(res[3])</span><br><span class="line">    local bytes = res[4]</span><br><span class="line"></span><br><span class="line">    local value, err = tcpsock:receive(tonumber(bytes) + 2)</span><br><span class="line">    if str_sub(value, -2, -1) == &quot;\r\n&quot; then</span><br><span class="line">        local succ, err, forcible = mc_shdict:set(key, str_sub(value, 1, bytes), exptime, flags)</span><br><span class="line">        if succ then</span><br><span class="line">            reply = reply .. &quot;STORED\r\n&quot;</span><br><span class="line">        else</span><br><span class="line">            reply = reply .. &quot;SERVER_ERROR&quot; .. err .. &quot;\r\n&quot;</span><br><span class="line">        end</span><br><span class="line">    else</span><br><span class="line">        reply = reply .. &quot;error format\r\n&quot;</span><br><span class="line">    end</span><br><span class="line">end</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">-- 3. 写响应</span><br><span class="line">    tcpsock:settimeout(1000)  -- one second timeout</span><br><span class="line">    local bytes, err = tcpsock:send(reply)</span><br><span class="line"></span><br></pre></td></tr></table></figure></li>
+</ol>
+<p>完整的demo 如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br></pre></td><td class="code"><pre><span class="line">-- local 本地变量声明</span><br><span class="line">local new_tab = require &quot;table.new&quot;</span><br><span class="line">local str_sub = string.sub</span><br><span class="line">local re_find = ngx.re.find</span><br><span class="line">local mc_shdict = ngx.shared.memcached</span><br><span class="line"></span><br><span class="line">-- 模块 模拟 oob 编程</span><br><span class="line">local _M = &#123;_VERSION = &#x27;0.01&#x27; &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">-- memcache 协议参数解析</span><br><span class="line">local function parse_args(s, start)</span><br><span class="line">    local arr = &#123;&#125;</span><br><span class="line">    ngx.log(ngx.ERR, &quot;parse_args data: &quot;, s, &quot; start pos: &quot;, start, &quot;\n&quot;)</span><br><span class="line">    while true do</span><br><span class="line">        local from, to, err = re_find(s, [[\S+]], &quot;jo&quot;, &#123;pos = start&#125;)</span><br><span class="line">        if not from then</span><br><span class="line">            break</span><br><span class="line">        end</span><br><span class="line">        ngx.log(ngx.ERR, &quot;parse_args add elem: &quot;,  str_sub(s, from, to))</span><br><span class="line">        table.insert( arr,  str_sub(s, from, to) )</span><br><span class="line">        start = to + 1</span><br><span class="line">    end</span><br><span class="line">    return arr</span><br><span class="line">end</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">-- 执行 memcache get 请求</span><br><span class="line">function _M.get(tcpsock, keys)</span><br><span class="line">    local reply = &quot;&quot;</span><br><span class="line">    for i = 1, #keys do</span><br><span class="line">        local key = keys[i]</span><br><span class="line">        local value, flags = mc_shdict:get(key)</span><br><span class="line">        if value then</span><br><span class="line">            ngx.log(ngx.ERR, &quot;get key: &quot;, key, &quot; value: &quot;, value, &quot;\n&quot;)</span><br><span class="line">            local flags  = flags or 0</span><br><span class="line">            -- reply = reply .. &quot;VALUE&quot; .. key .. &quot; &quot; .. flags .. &quot; &quot; .. #value .. &quot;\r\n&quot; .. value .. &quot;\r\n&quot;</span><br><span class="line">            reply = reply .. &quot;VALUE&quot; .. &quot; &quot; .. key .. &quot; &quot; .. flags .. &quot; &quot; .. #value  .. &quot;\r\n&quot;  .. value .. &quot;\r\n&quot;</span><br><span class="line"></span><br><span class="line">        end</span><br><span class="line">    end</span><br><span class="line">    reply = reply ..  &quot;END\r\n&quot;</span><br><span class="line"> </span><br><span class="line">    tcpsock:settimeout(1000)  -- one second timeout</span><br><span class="line">    local bytes, err = tcpsock:send(reply)</span><br><span class="line">end</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">-- 执行memcache set 请求</span><br><span class="line">function _M.set(tcpsock, res)</span><br><span class="line">    local reply = &quot;&quot;</span><br><span class="line">    local key = res[1]</span><br><span class="line">    local flags = tonumber(res[2])</span><br><span class="line">    local exptime = tonumber(res[3])</span><br><span class="line">    local bytes = res[4]</span><br><span class="line"></span><br><span class="line">    local value, err = tcpsock:receive(tonumber(bytes) + 2)</span><br><span class="line">    if str_sub(value, -2, -1) == &quot;\r\n&quot; then</span><br><span class="line">        local succ, err, forcible = mc_shdict:set(key, str_sub(value, 1, bytes), exptime, flags)</span><br><span class="line">        if succ then</span><br><span class="line">            reply = reply .. &quot;STORED\r\n&quot;</span><br><span class="line">        else</span><br><span class="line">            reply = reply .. &quot;SERVER_ERROR&quot; .. err .. &quot;\r\n&quot;</span><br><span class="line">        end</span><br><span class="line">    else</span><br><span class="line">        reply = reply .. &quot;error format\r\n&quot;</span><br><span class="line">    end</span><br><span class="line">    tcpsock:settimeout(1000) -- 1 s ?</span><br><span class="line">    local bytes, err = tcpsock:send(reply)</span><br><span class="line">end</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">-- 网络收发逻辑</span><br><span class="line">function _M.run()</span><br><span class="line">    local tcpsock = assert(ngx.req.socket(true))</span><br><span class="line">    while true do</span><br><span class="line">        tcpsock:settimeout(60000) -- 60 s</span><br><span class="line">        local data, err = tcpsock:receive(&quot;*l&quot;)  -- 此处是指收到一行完整的指令 ?</span><br><span class="line">        if err then</span><br><span class="line">            ngx.log(ngx.ERR, &quot;tcpsock recv err:&quot; .. err)</span><br><span class="line">            return</span><br><span class="line">        end</span><br><span class="line">        ngx.log(ngx.ERR, &quot;recv time loop 1 data: &quot;, data, &quot;err :&quot;, err, &quot;\n&quot;)</span><br><span class="line"></span><br><span class="line">        local command, args </span><br><span class="line">        if data then</span><br><span class="line">            local from, to, err = re_find(data, [[(\S+)]], &quot;jo&quot;)</span><br><span class="line">            ngx.log(ngx.ERR, &quot;recv time loop 1 data&quot;, data, &quot; from: &quot;, from, to, &quot;\n&quot;)</span><br><span class="line">            if from then</span><br><span class="line">                command = str_sub(data, from, to)</span><br><span class="line">                args = parse_args(data, to + 1)</span><br><span class="line">            end</span><br><span class="line">        end</span><br><span class="line">        ngx.log(ngx.ERR, &quot;recv time loop 1 data&quot;, data, &quot;cmd: &quot;, command, &quot;args: &quot;, table.concat( args, &quot;, &quot;), &quot;\n&quot;)</span><br><span class="line">        if args then</span><br><span class="line">            local args_len = #args</span><br><span class="line">            ngx.log(ngx.ERR, &quot;recv time loop 1 args_len&quot;, args_len, &quot;\n&quot;)</span><br><span class="line">            if command == &#x27;get&#x27; and args_len &gt;= 1 then</span><br><span class="line">                ngx.log(ngx.ERR, &quot;get cmd detect&quot;)</span><br><span class="line">                _M.get(tcpsock, args)</span><br><span class="line">            end</span><br><span class="line"></span><br><span class="line">            if command == &#x27;set&#x27; and args_len == 4 then</span><br><span class="line">                _M.set(tcpsock, args)</span><br><span class="line">            end</span><br><span class="line">        end</span><br><span class="line">    end</span><br><span class="line"></span><br><span class="line">    -- ngx.say(&quot;running from mechched&quot;)</span><br><span class="line">end</span><br><span class="line"></span><br><span class="line">return _M</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-4-运行-amp-amp-验证"><a href="#2-4-运行-amp-amp-验证" class="headerlink" title="2.4 运行 &amp;&amp; 验证"></a>2.4 运行 &amp;&amp; 验证</h4><p>手动执行 2.1 的测试用例， 正常响应如下图所示:<br><img src="%E6%B5%8B%E8%AF%95%E7%94%A8%E4%BE%8Bmemcache.png"></p>
+<h3 id="3-其它"><a href="#3-其它" class="headerlink" title="3. 其它"></a>3. 其它</h3><p><strong>碰到的问题:</strong></p>
+<ol>
+<li>在调试 tcp 接受请求时, 无响应且cpu 被打满。<br>排查发现，是因为处理网络收包过程中出现的错误, 一直在死循环中, 调用 receive 函数。 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">// 修改前:</span><br><span class="line">local data, err = tcpsock:receive(&quot;*l&quot;)  </span><br><span class="line"></span><br><span class="line">// 修改后:</span><br><span class="line">local data, err = tcpsock:receive(&quot;*l&quot;)  </span><br><span class="line">if err then</span><br><span class="line">        ngx.log(ngx.ERR, &quot;tcpsock recv err:&quot; .. err)</span><br><span class="line">        return</span><br><span class="line">end</span><br></pre></td></tr></table></figure></li>
+<li>memcache get 请求返回错误。<br>排查发现，章节内给的 reply 拼接代码少了一个 空格 导致，memcache client 协议解析失败报错。<figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">// 修改前:</span><br><span class="line">reply = reply .. <span class="string">&quot;VALUE&quot;</span> .. key .. <span class="string">&quot; &quot;</span> .. flags .. <span class="string">&quot; &quot;</span> .. #value .. <span class="string">&quot;\r\n&quot;</span> .. value .. <span class="string">&quot;\r\n&quot;</span></span><br><span class="line"></span><br><span class="line">// 修改后:</span><br><span class="line">reply = reply .. <span class="string">&quot;VALUE&quot;</span> .. <span class="string">&quot; &quot;</span> .. key .. <span class="string">&quot; &quot;</span> .. flags .. <span class="string">&quot; &quot;</span> .. #value .. <span class="string">&quot;\r\n&quot;</span>  .. value .. <span class="string">&quot;\r\n&quot;</span></span><br></pre></td></tr></table></figure></li>
+</ol>
+
+                
+
+                <hr>
+                <!-- Pager -->
+                <ul class="pager">
+                    
+                        <li class="previous">
+                            <a href="/2019/10/12/centos-systemctl管理用户服务/" data-toggle="tooltip" data-placement="top" title="Systemctl 管理用户服务">&larr; Previous post</a>
+                        </li>
+                    
+                    
+                        <li class="next">
+                            <a href="/2019/07/13/openresty-ffi加载动态库/" data-toggle="tooltip" data-placement="top" title="Openresty FFI 加载动态库">Next post &rarr;</a>
+                        </li>
+                    
+                </ul>
+
+                <br>
+
+                <!--打赏-->
+                
+                <!--打赏-->
+
+                <br>
+                <!--分享-->
+                
+                    <div class="social-share"  data-wechat-qrcode-helper="" align="center"></div>
+                    <!--  css & js -->
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/social-share.js/1.0.16/css/share.min.css">
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/social-share.js/1.0.16/js/social-share.min.js"></script>
+                
+                <!--分享-->
+                <br>                       
+                
+                <!-- require APlayer -->
+                
+
+                <!-- disqus comment start -->
+                
+                <!-- disqus comment end -->
+
+                
+				
+            </div>
+
+            <!-- Tabe of Content -->
+            <!-- Table of Contents -->
+
+                
+            <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <!-- no hr -->
+                    <h5><a href="/tags/">Tags</a></h5>
+                    <div class="tags">
+                       
+                          <a class="tag" href="/tags/#openresty" title="openresty">openresty</a>
+                        
+                          <a class="tag" href="/tags/#cosocket" title="cosocket">cosocket</a>
+                        
+                          <a class="tag" href="/tags/#memcached" title="memcached">memcached</a>
+                        
+                    </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+
+                    
+                        <li><a href="http://www.sumoon.com" target="_blank">ACE theme</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("https://cdn.bootcss.com/anchor-js/1.1.1/anchor.min.js",function(){
+        anchors.options = {
+          visible: 'hover',
+          placement: 'left',
+          icon: 'ℬ'
+        };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+
+    <!-- Footer -->
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                
+                
+                
+
+                
+
+                
+
+                
+                    <li>
+                        <a target="_blank"  href="https://github.com/kinggozhang">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; tandd 2021 
+                    <br>
+                    Powered by <a target="_blank" rel="noopener" href="http://www.hexo.io">Hexo</a> 
+                    <span style="display: inline-block; margin: 0 5px;">
+                        <i class="fa fa-heart"></i>
+                    </span> 
+                    Theme by <a target="_blank" rel="noopener" href="https://github.com/kinggozhang/hexo-theme-ace">ACE</a> 
+					
+					
+					<i class="fa fa-eye" id="leancounter"></i>
+					
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+
+   
+<script src="https://cdn.staticfile.org/jquery/2.2.4/jquery.min.js"></script>
+
+
+
+
+<!-- Bootstrap Core JavaScript -->
+
+   
+<script src="https://cdn.staticfile.org/twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+
+
+<!-- Custom Theme JavaScript -->
+
+<script src="/js/hux-blog.min.js"></script>
+
+
+
+	
+<script src="/js/particles.js"></script>
+
+	
+<script src="/js/particles_config.js"></script>
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- 
+     Because of the native support for backtick-style fenced code blocks 
+     right within the Markdown is landed in Github Pages, 
+     From V1.6, There is no need for Highlight.js, 
+     so Huxblog drops it officially.
+
+     - https://github.com/blog/2100-github-pages-now-faster-and-simpler-with-jekyll-3-0  
+     - https://help.github.com/articles/creating-and-highlighting-code-blocks/    
+-->
+<!--
+    <script>
+        async("http://cdn.bootcss.com/highlight.js/8.6/highlight.min.js", function(){
+            hljs.initHighlightingOnLoad();
+        })
+    </script>
+    <link href="http://cdn.bootcss.com/highlight.js/8.6/styles/github.min.css" rel="stylesheet">
+-->
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async("http://example.com/2019/07/25/openresty-cosocket%E6%89%A9%E5%B1%95memcached%E6%9C%8D%E5%8A%A1/index.html/js/jquery.tagcloud.js",function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("https://cdn.bootcss.com/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+
+
+
+<!-- Baidu Tongji -->
+
+
+
+
+
+
+	<a id="rocket" href="#top" class=""></a>
+	<script type="text/javascript" src="/js/totop.js?v=1.0.0" async=""></script>
+    <script type="text/javascript" src="/js/toc.js?v=1.0.0" async=""></script>
+<!-- Image to hack wechat -->
+<img src="http://example.com/img/icon_wechat.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>
