@@ -18,7 +18,7 @@
         
     </title>
 
-    <link rel="canonical" href="http://example.com/">
+    <link rel="canonical" href="http://example.com/archives/2021/10/">
 
     <!-- Bootstrap Core CSS -->
 
@@ -244,212 +244,140 @@
             ">
             
 	        
-                <!-- Main Content -->
-
-
-
-
-<div class="w3-row-padding">
-	<a href="/2021/10/19/go-context信息透传/">
-        <h2 class="post-title">
-            go-context 信息传递上下文
-        </h2>
-        <h3 class="post-subtitle">
+                
+<!-- Main Content -->
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+            <!-- 归档列表 -->
             
-        </h3>
-	</a>
-
-<div>
-
-    <a href="/2021/10/19/go-context信息透传/">
-
-        <div class="post-content-preview">
-            在我们的日常业务开发场景中，上下文信息对于我们也是不可或缺的，
-那到底啥是上下文呢？可以简单理解为，在 API 之间或者方法调用之间，所传递的除了业务参数之外的额外信息。
-比如，服务端接收到客户端的请求后，可以把客户端的 IP 地址和端口、客户端版本, 客户端设备、请求接收的时间、TraceID 等信息放入到上下文中, 这个上下文信息可以在后端的方法调用中层层传递。后端的业务服务除了从.........
-        </div>
-    </a>
-    
-        <p class="post-meta">
-            Posted by tandd on
-            2021-10-19
-        </p>
-    
-
-</div>
-</div>
-<hr>
-
-
-<div class="w3-row-padding">
-	<a href="/2020/12/11/vagrant-machine-扩容/">
-        <h2 class="post-title">
-            Vagrant Machine 扩容
-        </h2>
-        <h3 class="post-subtitle">
             
-        </h3>
-	</a>
 
-<div>
+             <!-- 归档列表 -->
 
-    <a href="/2020/12/11/vagrant-machine-扩容/">
-
-        <div class="post-content-preview">
-            Vagrant Machine 扩容最近一直使用 vagrant 搭建本地的虚拟机环境，用于本地开发调试。 使用一段时间后发现虚拟机的磁盘使用率达到 100%, 导致对磁盘的写入操作都报错。 
-12345排查时才发现 vagrant 在创建 machine 时， 默认配置如下:cpu: 1   核心内存: 512 MB磁盘: 10  GB
-
-
-由于开发环境搭建配置和验证比较耗时, 所以.........
-        </div>
-    </a>
-    
-        <p class="post-meta">
-            Posted by tandd on
-            2020-12-11
-        </p>
-    
-
-</div>
-</div>
-<hr>
-
-
-<div class="w3-row-padding">
-	<a href="/2019/10/12/centos-systemctl管理用户服务/">
-        <h2 class="post-title">
-            Systemctl 管理用户服务
-        </h2>
-        <h3 class="post-subtitle">
             
-        </h3>
-	</a>
-
-<div>
-
-    <a href="/2019/10/12/centos-systemctl管理用户服务/">
-
-        <div class="post-content-preview">
-            目前公司生产环境的服务器部署的大都是 Centos7.x。 
-针对部分直接部署在虚拟机(服务未迁移到 docker/k8s)上的业务服务。 还是通过 tar 包传输文件, 在目标节点上解压缩, 备份或替换等操作, 每次重启时都需要 到特定的服务目录下执行对应的命令。需要手动维护各个服务的启动命令, 管理起来不方便，针对目前的持续集成支持的也不好。 
-比较了一些常用的服务管理方式，如 c.........
-        </div>
-    </a>
-    
-        <p class="post-meta">
-            Posted by tandd on
-            2019-10-12
-        </p>
-    
-
-</div>
-</div>
-<hr>
-
-
-<div class="w3-row-padding">
-	<a href="/2019/07/25/openresty-cosocket扩展memcached服务/">
-        <h2 class="post-title">
-            基于 Openresty cosocket 实现 memcached 服务
-        </h2>
-        <h3 class="post-subtitle">
+            <div class="one-tag-list">
+                <span class="fa fa-calendar-times-o listing-seperator" id="2021">
+                    <span class="tag-text">2021</span>
+                </span>
+                <ul>
+                
+                  <!-- <li class="listing-item">
+                  <time datetime="{{ post.date | date:"%Y-%m-%d" }}">{{ post.date | date:"%Y-%m-%d" }}</time>
+                  <a href="{{ post.url }}" title="{{ post.title }}">{{ post.title }}</a>
+                  </li> -->
+                 <li >
+                    10-19
+                    <i class="fa fa-angle-double-right" aria-hidden="true"></i>
+                    <a href="/2021/10/19/go-context信息透传/" style="color: #0085a1">
+                        <span>
+                            go-context 信息传递上下文
+                        </span>
+                    </a>
+                    <!-- <p class="post-meta">{{ post.date | date:"%Y-%m-%d" }}</p> -->
+                </li>
+                
+                </ul>
+            </div>
             
-        </h3>
-	</a>
-
-<div>
-
-    <a href="/2019/07/25/openresty-cosocket扩展memcached服务/">
-
-        <div class="post-content-preview">
-            本文主要记录和总结。在学习了极客时间 openresty 课程(第三章 cosocket, 实现Memcached Server), 实践过程中碰到的问题。
-1. Openresty Cosocket 基础cosocket: cosocket 是 OpenResty 中的专有名词，是把协程和网络套接字的英文拼在一起形成的，即 cosocket = coroutine + socket。.........
-        </div>
-    </a>
-    
-        <p class="post-meta">
-            Posted by tandd on
-            2019-07-25
-        </p>
-    
-
-</div>
-</div>
-<hr>
-
-
-<div class="w3-row-padding">
-	<a href="/2019/07/13/openresty-ffi加载动态库/">
-        <h2 class="post-title">
-            Openresty FFI 加载动态库
-        </h2>
-        <h3 class="post-subtitle">
+            <div class="one-tag-list">
+                <span class="fa fa-calendar-times-o listing-seperator" id="2020">
+                    <span class="tag-text">2020</span>
+                </span>
+                <ul>
+                
+                  <!-- <li class="listing-item">
+                  <time datetime="{{ post.date | date:"%Y-%m-%d" }}">{{ post.date | date:"%Y-%m-%d" }}</time>
+                  <a href="{{ post.url }}" title="{{ post.title }}">{{ post.title }}</a>
+                  </li> -->
+                 <li >
+                    12-11
+                    <i class="fa fa-angle-double-right" aria-hidden="true"></i>
+                    <a href="/2020/12/11/vagrant-machine-扩容/" style="color: #0085a1">
+                        <span>
+                            Vagrant Machine 扩容
+                        </span>
+                    </a>
+                    <!-- <p class="post-meta">{{ post.date | date:"%Y-%m-%d" }}</p> -->
+                </li>
+                
+                </ul>
+            </div>
             
-        </h3>
-	</a>
-
-<div>
-
-    <a href="/2019/07/13/openresty-ffi加载动态库/">
-
-        <div class="post-content-preview">
-            本文主要记录和总结。在学习了极客时间 openresty 课程(第二章 luajit 通过 FFI 调用动态库), 实践过程中碰到的问题。
-1. Openresty 调用 C 函数方式在 openresty 中调用 C 函数主要有两种方式。lua C 方式(lua 语言提供) 和 FFI 调用动态库(luajit 提供):lua C 方式:使用 栈 来传递参数 和 响应结果。 且被调用.........
-        </div>
-    </a>
-    
-        <p class="post-meta">
-            Posted by tandd on
-            2019-07-13
-        </p>
-    
-
-</div>
-</div>
-<hr>
-
-
-<div class="w3-row-padding">
-	<a href="/2019/03/19/docker-基本概念/">
-        <h2 class="post-title">
-            docker-底层的技术实现
-        </h2>
-        <h3 class="post-subtitle">
+            <div class="one-tag-list">
+                <span class="fa fa-calendar-times-o listing-seperator" id="2019">
+                    <span class="tag-text">2019</span>
+                </span>
+                <ul>
+                
+                  <!-- <li class="listing-item">
+                  <time datetime="{{ post.date | date:"%Y-%m-%d" }}">{{ post.date | date:"%Y-%m-%d" }}</time>
+                  <a href="{{ post.url }}" title="{{ post.title }}">{{ post.title }}</a>
+                  </li> -->
+                 <li >
+                    10-12
+                    <i class="fa fa-angle-double-right" aria-hidden="true"></i>
+                    <a href="/2019/10/12/centos-systemctl管理用户服务/" style="color: #0085a1">
+                        <span>
+                            Systemctl 管理用户服务
+                        </span>
+                    </a>
+                    <!-- <p class="post-meta">{{ post.date | date:"%Y-%m-%d" }}</p> -->
+                </li>
+                
+                  <!-- <li class="listing-item">
+                  <time datetime="{{ post.date | date:"%Y-%m-%d" }}">{{ post.date | date:"%Y-%m-%d" }}</time>
+                  <a href="{{ post.url }}" title="{{ post.title }}">{{ post.title }}</a>
+                  </li> -->
+                 <li >
+                    07-25
+                    <i class="fa fa-angle-double-right" aria-hidden="true"></i>
+                    <a href="/2019/07/25/openresty-cosocket扩展memcached服务/" style="color: #0085a1">
+                        <span>
+                            基于 Openresty cosocket 实现 memcached 服务
+                        </span>
+                    </a>
+                    <!-- <p class="post-meta">{{ post.date | date:"%Y-%m-%d" }}</p> -->
+                </li>
+                
+                  <!-- <li class="listing-item">
+                  <time datetime="{{ post.date | date:"%Y-%m-%d" }}">{{ post.date | date:"%Y-%m-%d" }}</time>
+                  <a href="{{ post.url }}" title="{{ post.title }}">{{ post.title }}</a>
+                  </li> -->
+                 <li >
+                    07-13
+                    <i class="fa fa-angle-double-right" aria-hidden="true"></i>
+                    <a href="/2019/07/13/openresty-ffi加载动态库/" style="color: #0085a1">
+                        <span>
+                            Openresty FFI 加载动态库
+                        </span>
+                    </a>
+                    <!-- <p class="post-meta">{{ post.date | date:"%Y-%m-%d" }}</p> -->
+                </li>
+                
+                  <!-- <li class="listing-item">
+                  <time datetime="{{ post.date | date:"%Y-%m-%d" }}">{{ post.date | date:"%Y-%m-%d" }}</time>
+                  <a href="{{ post.url }}" title="{{ post.title }}">{{ post.title }}</a>
+                  </li> -->
+                 <li >
+                    03-19
+                    <i class="fa fa-angle-double-right" aria-hidden="true"></i>
+                    <a href="/2019/03/19/docker-基本概念/" style="color: #0085a1">
+                        <span>
+                            docker-底层的技术实现
+                        </span>
+                    </a>
+                    <!-- <p class="post-meta">{{ post.date | date:"%Y-%m-%d" }}</p> -->
+                </li>
+                
+                </ul>
+            </div>
             
-        </h3>
-	</a>
 
-<div>
 
-    <a href="/2019/03/19/docker-基本概念/">
-
-        <div class="post-content-preview">
-            本文主要记录和学习，docker 相关的基本概念和底层的技术实现。
-在 docker 出现前，我们或多或少会碰到 本地开发环境环境 和 测试环境以及 生产环境 不一致的问题。对于公共环境 和 多服务，多语言, 多语言，多版本的环境导致的问题排查起来尤其头大
-明明在本地运行得好好的应用，却需要做很多修改和配置工作才能在 测试/生产环境里运行起来。而这些修改和配置，有时得靠不断试错, 而公.........
         </div>
-    </a>
-    
-        <p class="post-meta">
-            Posted by tandd on
-            2019-03-19
-        </p>
-    
-
+    </div>
 </div>
-</div>
-<hr>
-
-
-
-<!-- Pager -->
-
-<ul class="pager">
-    
-    
-</ul>
-
-
             
 
 
@@ -768,7 +696,7 @@
 <script>
     // only load tagcloud.js in tag.html
     if($('#tag_cloud').length !== 0){
-        async("http://example.com/index.html/js/jquery.tagcloud.js",function(){
+        async("http://example.com/archives/2021/10/index.html/js/jquery.tagcloud.js",function(){
             $.fn.tagcloud.defaults = {
                 //size: {start: 1, end: 1, unit: 'em'},
                 color: {start: '#bbbbee', end: '#0085a1'},

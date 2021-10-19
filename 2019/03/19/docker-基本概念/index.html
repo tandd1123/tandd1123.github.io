@@ -14,11 +14,11 @@
     <script async defer src="https://buttons.github.io/buttons.js"></script>
     <title>
         
-          Systemctl 管理用户服务 - 个人技术博客
+          docker-底层的技术实现 - 个人技术博客
         
     </title>
 
-    <link rel="canonical" href="http://example.com/2019/10/12/centos-systemctl管理用户服务/">
+    <link rel="canonical" href="http://example.com/2019/03/19/docker-基本概念/">
 
     <!-- Bootstrap Core CSS -->
 
@@ -122,16 +122,22 @@
                     <div class="post-heading" style="padding:40px">
                         <div class="tags">
                             
-                              <a class="tag" href="/tags/#centos" title="centos">centos</a>
+                              <a class="tag" href="/tags/#docker" title="docker">docker</a>
                             
-                              <a class="tag" href="/tags/#systemctl" title="systemctl">systemctl</a>
+                              <a class="tag" href="/tags/#cri" title="cri">cri</a>
+                            
+                              <a class="tag" href="/tags/#namespace" title="namespace">namespace</a>
+                            
+                              <a class="tag" href="/tags/#cgroup" title="cgroup">cgroup</a>
+                            
+                              <a class="tag" href="/tags/#aufs" title="aufs">aufs</a>
                             
                         </div>
-                        <h1>Systemctl 管理用户服务</h1>
+                        <h1>docker-底层的技术实现</h1>
                         <h2 class="subheading"></h2>
                         <span class="meta">
                             Posted by tandd on
-                            2019-10-12
+                            2019-03-19
                         </span>
                     </div>
                 
@@ -249,97 +255,45 @@
                 col-md-10 col-md-offset-1
                 post-container">
 
-                <p>目前公司生产环境的服务器部署的大都是 Centos7.x。 </p>
-<p>针对部分直接部署在虚拟机(服务未迁移到 docker/k8s)上的业务服务。 还是通过 tar 包传输文件, 在目标节点上解压缩, 备份或替换等操作, 每次重启时都需要 到特定的服务目录下执行对应的命令。需要手动维护各个服务的启动命令, 管理起来不方便，针对目前的持续集成支持的也不好。 </p>
-<p>比较了一些常用的服务管理方式，如 cron, superior, systemd 后，个人还是觉得 systemctl 做业务服务管理更好。 </p>
-<p>此文仅记录自己在本地配置用户 service 的过程, 学习使用。</p>
-<h3 id="1-Systemctl配置脚本目录"><a href="#1-Systemctl配置脚本目录" class="headerlink" title="1 Systemctl配置脚本目录"></a>1 Systemctl配置脚本目录</h3><p>systemctl 的配置脚本在服务器的 /usr/lib/systemd 目录下。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">system    目录: 系统服务</span><br><span class="line">user      目录: 用户服务,需要用户登录才运行。</span><br><span class="line">*.service 文件: 普通服务</span><br><span class="line">*.target  文件: 开机启动服务</span><br></pre></td></tr></table></figure>
-
-<h3 id="2-服务配置"><a href="#2-服务配置" class="headerlink" title="2 服务配置"></a>2 服务配置</h3><p>服务配置文件主要由三部分构成:</p>
+                <p>本文主要记录和学习，docker 相关的基本概念和底层的技术实现。</p>
+<p>在 docker 出现前，我们或多或少会碰到 本地开发环境环境 和 测试环境以及 生产环境 不一致的问题。<br><code>对于公共环境 和 多服务，多语言, 多语言，多版本的环境导致的问题排查起来尤其头大</code></p>
+<p>明明在本地运行得好好的应用，却需要做很多修改和配置工作才能在 测试/生产环境里运行起来。而这些修改和配置，有时得靠不断试错, 而公共的环境配置一旦发生了修改导致服务不可用，又得重复做一次上面的行为，</p>
+<p><strong><font color=red>Docker 镜像彻底解决，应用运行环境的一致性的问题, 同时提升了服务的隔离性</font></strong></p>
+<h3 id="1-Docker-容器进程的视图和资源限制"><a href="#1-Docker-容器进程的视图和资源限制" class="headerlink" title="1. Docker 容器进程的视图和资源限制"></a>1. Docker 容器进程的视图和资源限制</h3><p>容器可以理解为是一种沙盒技术, 沙盒就是能够像一个集装箱一样，把你的应用“装”起来的技术。这样应用之间，就因为有了边界而不至于相互干扰；而被装进集装箱的应用，也可以被方便地搬来搬去，</p>
+<p>容器技术的核心功能，就是通过约束和修改进程视图，为其创造出一个“边界”。</p>
+<p>对于 Linux 的容器进程, 主要使用 Cgroups(制造约束), Namespace(修改视图)</p>
+<p><strong>Namespace:</strong><br>我们在创建进程的时候，可以指定不同的 namespace 用来对各种不同的进程上下文进行“障眼法”操作。<br>创建进程代码如下，设置 CLONE_NEWPID namespace</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">int pid = clone(main_function, stack_size, CLONE_NEWPID | SIGCHLD, NULL); </span><br></pre></td></tr></table></figure>
+<p>Namespace 技术实际上修改了应用进程看待整个计算机“视图”，即它的“视线”被操作系统做了限制，只能“看到”某些指定的内容。<br><code>注: Linux 操作系统还提供了 Mount、UTS、IPC、Network 和 User 这些 Namespace</code></p>
+<p><strong>Cgroups:</strong><br>Linux Cgroups 的全称是 Linux Control Group， 主要的作用，就是限制一个进程组能够使用的资源上限。<br>Linux 中, Cgroups 给用户暴露出来的操作接口是文件系统，即它以文件和目录的方式组织在操作系统的 /sys/fs/cgroup 路径下。</p>
+<p>在/sys/fs/cgroup 下面有很多诸如 cpuset、cpu、 memory 这样的子目录，也叫 <strong>子系统</strong>。在子系统目录下，你就可以看到该类资源具体可以被限制的方法。</p>
+<p>对于 Docker 来说, 也是利用这种方式实现限制容器程序的资源使用。 具体的操作如下:<br>docker 程序会在在每个子系统下面，为每个容器创建一个控制组（即创建一个新目录），然后在启动容器进程之后，把这个进程的 PID 填写到对应控制组的 tasks 文件中就可以了。</p>
+<h3 id="2-Docker-镜像"><a href="#2-Docker-镜像" class="headerlink" title="2. Docker 镜像"></a>2. Docker 镜像</h3><p>容器镜像：是指挂载在容器根目录上、用来为容器进程提供隔离后执行环境的文件系统。也叫作：rootfs（根文件系统)。</p>
+<p>rootfs 只是一个操作系统所包含的文件、配置和目录，并不包括操作系统内核, rootfs 只包括了操作系统的“躯壳”，并没有包括操作系统的“灵魂”。 正是由于 rootfs 的存在，容器才有了一个被反复宣传至今的重要特性：一致性。</p>
+<p>由于 rootfs 里打包的不只是应用，而是整个操作系统的文件和目录，也就意味着，应用以及它运行所需要的所有依赖，都被封装在了一起。</p>
+<p>docker 镜像，其实就是一个压缩包。但是这个压缩包里的内容，比 应用可执行文件 + 启停脚本的组合就要丰富多了。<br>实际上，大多数 Docker 镜像是直接由一个完整操作系统的所有文件和目录构成的，所以这个压缩包里的内容跟你本地开发和测试环境用的操作系统是完全一样的。</p>
+<p>Docker 在镜像的设计中，引入了层（layer）的概念。也就是说，用户制作镜像的每一步操作，都会生成一个层，也就是一个增量 rootfs。</p>
+<p>当然，这个想法不是凭空臆造出来的，而是用到了一种叫作联合文件系统（Union File System）的能力。Union File System 也叫 UnionFS，最主要的功能是将多个不同位置的目录联合挂载（union mount）到同一个目录下.</p>
+<p>从这个结构可以看出来，这个容器运行时的 rootfs 从下往上的次序的三部分组成：<br>第一部分，只读层。<br>第三部分，init 层。<br>第二部分，可读写层。</p>
+<p><strong>只读层:</strong><br>容器的 rootfs 最下面的一部分(我们通过 docker pull 指令拉取的镜像层, 就在这一部分)，它们的挂载方式都是只读的</p>
+<p><strong>init 层。</strong><br>它是一个以“-init”结尾的层，在只读层和读写层之间。init 层是 Docker 项目单独生成的一个内部层，专门用来存放 /etc/hosts、/etc/resolv.conf 等信息。<br>需要这样一层的原因是，这些文件本来属于只读的 Ubuntu 镜像的一部分，但是用户往往需要在启动容器时写入一些指定的值比如 hostname，所以就需要在可读写层实现对它们进行修改。<br>但是 Docker 做法是，在修改了这些文件之后，以一个单独的层挂载了出来。而用户执行 docker commit 只会提交可读写层，所以是不包含这些内容的。</p>
+<p><strong>可读写层:</strong><br>它是这个容器的 rootfs 最上面的一层（6e3be5d2ecccae7cc），它的挂载方式为：rw，即 read write。在没有写入文件之前，这个目录是空的。而一旦在容器里做了写操作，你修改产生的内容就会以增量的方式出现在这个层中。</p>
+<p>通过结合使用 Mount Namespace 和 rootfs，容器就能够为进程构建出一个完善的文件系统隔离环境。当然，这个功能的实现还依赖chroot 这个系统调用切换进程根目录的能力。</p>
+<h3 id="3-总结"><a href="#3-总结" class="headerlink" title="3. 总结"></a>3. 总结</h3><p>Docker 最核心的原理实际上就是为待创建的用户进程：<br>启用 Linux Namespace 配置；<br>设置指定的 Cgroups 参数；<br>切换进程的根目录（Change Root）。</p>
+<h3 id="3-1-容器相关的规范"><a href="#3-1-容器相关的规范" class="headerlink" title="3.1 容器相关的规范"></a>3.1 容器相关的规范</h3><p>由 OCI 组织， 制定的开放容器规范，主要包含一下两个规范:</p>
 <ol>
-<li>unit(服务说明)</li>
-<li>install(安装配置)</li>
-<li>service(服务配置)</li>
+<li>runtine spec</li>
+<li>image format spec</li>
 </ol>
-<p><code>注: 服务配置歌手内容类似于 ini 文件的格式。 </code> </p>
-<h4 id="2-1-unit-服务说明"><a href="#2-1-unit-服务说明" class="headerlink" title="2.1 unit(服务说明)"></a>2.1 unit(服务说明)</h4><p>unit 区域主要用于描述服务的信息。 关键字段如下：</p>
-<table>
-<thead>
-<tr>
-<th>字段名称</th>
-<th>描述</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Description</td>
-<td>服务描述说明</td>
-</tr>
-<tr>
-<td>After</td>
-<td>表示本服务需要在其它服务启动后在启动, 用来解决服务间的启动顺序问题。</td>
-</tr>
-</tbody></table>
-<h4 id="2-2-install-安装配置"><a href="#2-2-install-安装配置" class="headerlink" title="2.2 install(安装配置)"></a>2.2 install(安装配置)</h4><p>install 区域主要用于描述服务配置信息，关键字段如下:</p>
-<table>
-<thead>
-<tr>
-<th>字段名称</th>
-<th>描述</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>WantedBy</td>
-<td>多用户命令行状态，推荐设置 multi-user.target</td>
-</tr>
-</tbody></table>
-<h4 id="2-3-service-服务配置"><a href="#2-3-service-服务配置" class="headerlink" title="2.3 service(服务配置)"></a>2.3 service(服务配置)</h4><p>service 区域主要用于描述服务配置信息，关键字段如下:</p>
-<table>
-<thead>
-<tr>
-<th>字段名称</th>
-<th>描述</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>User</td>
-<td>服务运行的用户,   默认是 push</td>
-</tr>
-<tr>
-<td>Group</td>
-<td>服务运行的用户组, 默认是 push</td>
-</tr>
-<tr>
-<td>Type</td>
-<td>服务后台运行模式，默认是 forking(启动后父进程可关闭，子进程作为守护进程运行)</td>
-</tr>
-<tr>
-<td>ExecStartPre</td>
-<td>启动服务前执行的命令</td>
-</tr>
-<tr>
-<td>ExecStart</td>
-<td>启动服务的命令，需要按照业务服务启动命令修改。 <strong><font color=red>此处填写服务启动命令</font></strong></td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>ExecStartPost</td>
-<td>服务启动后命令</td>
-</tr>
-<tr>
-<td>Restart</td>
-<td>重启方式, on-failure(非正常退出时重启), always(总是重启) <strong><font color=red>一般选择 always</font></strong></td>
-</tr>
-</tbody></table>
-<p><code>注: Exec前缀的命令，仅接受 指令 参数 参数..格式，不能接受&lt;&gt;|&amp;等特殊字符，如果想要支持bash语法, 需要将Type 设置为 oneshot 模式</code></p>
-<h3 id="3-用户服务-service-配置"><a href="#3-用户服务-service-配置" class="headerlink" title="3. 用户服务 service 配置"></a>3. 用户服务 service 配置</h3><p>以 Demo 服务为例，创建一个demo.service 配置并输入一下配置信息:</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">[Unit]</span><br><span class="line">Description=Demo Service</span><br><span class="line">After=network.target</span><br><span class="line"></span><br><span class="line">[Service]</span><br><span class="line">User=push</span><br><span class="line">Group=push</span><br><span class="line">Type=forking</span><br><span class="line">PIDFile=/var/run/demo/demo.pid</span><br><span class="line">TimeoutSec=5</span><br><span class="line">ExecStart=/tmp/demo</span><br><span class="line">Restart=always</span><br><span class="line"></span><br><span class="line">[Install]</span><br><span class="line">WantedBy=multi-user.target</span><br></pre></td></tr></table></figure>
-
-
-<p>配置完毕后，给该配置文件赋予754以上权限。<br>手动执行: systemctl daemon-reload &amp;&amp; systemctl start demo, 可通过 systemctl status命令可查看服务的状态。</p>
+<p><strong>runtine spec:</strong><br>全称是 Open Container Initiative Runtime Specification 旨在指定容器的配置、执行环境和生命周期。<br>规范主要集中在这三个方面：</p>
+<ul>
+<li>配置文件格式</li>
+<li>组标准操作</li>
+<li>执行环境</li>
+</ul>
+<p>详情可看：<a target="_blank" rel="noopener" href="https://github.com/opencontainers/runtime-spec">https://github.com/opencontainers/runtime-spec</a></p>
+<p><strong>image format spec:</strong><br>全称是 Open Container Initiative Image Specification<br>该规范定义了一个 OCI 镜像，由一个清单、一个镜像索引（可选）、一组文件系统层和一个配置组成。本规范的目标是创建可互操作的工具，用于构建、传输和准备要运行的容器映像。</p>
+<p>详情可看：<a target="_blank" rel="noopener" href="https://github.com/opencontainers/image-spec">https://github.com/opencontainers/image-spec</a></p>
 
                 
 
@@ -348,13 +302,9 @@
                 <ul class="pager">
                     
                         <li class="previous">
-                            <a href="/2020/12/11/vagrant-machine-扩容/" data-toggle="tooltip" data-placement="top" title="Vagrant Machine 扩容">&larr; Previous post</a>
+                            <a href="/2019/07/13/openresty-ffi加载动态库/" data-toggle="tooltip" data-placement="top" title="Openresty FFI 加载动态库">&larr; Previous post</a>
                         </li>
                     
-                    
-                        <li class="next">
-                            <a href="/2019/07/25/openresty-cosocket扩展memcached服务/" data-toggle="tooltip" data-placement="top" title="基于 Openresty cosocket 实现 memcached 服务">Next post &rarr;</a>
-                        </li>
                     
                 </ul>
 
@@ -403,9 +353,15 @@
                     <h5><a href="/tags/">Tags</a></h5>
                     <div class="tags">
                        
-                          <a class="tag" href="/tags/#centos" title="centos">centos</a>
+                          <a class="tag" href="/tags/#docker" title="docker">docker</a>
                         
-                          <a class="tag" href="/tags/#systemctl" title="systemctl">systemctl</a>
+                          <a class="tag" href="/tags/#cri" title="cri">cri</a>
+                        
+                          <a class="tag" href="/tags/#namespace" title="namespace">namespace</a>
+                        
+                          <a class="tag" href="/tags/#cgroup" title="cgroup">cgroup</a>
+                        
+                          <a class="tag" href="/tags/#aufs" title="aufs">aufs</a>
                         
                     </div>
                 </section>
@@ -580,7 +536,7 @@
 <script>
     // only load tagcloud.js in tag.html
     if($('#tag_cloud').length !== 0){
-        async("http://example.com/2019/10/12/centos-systemctl%E7%AE%A1%E7%90%86%E7%94%A8%E6%88%B7%E6%9C%8D%E5%8A%A1/index.html/js/jquery.tagcloud.js",function(){
+        async("http://example.com/2019/03/19/docker-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/index.html/js/jquery.tagcloud.js",function(){
             $.fn.tagcloud.defaults = {
                 //size: {start: 1, end: 1, unit: 'em'},
                 color: {start: '#bbbbee', end: '#0085a1'},
