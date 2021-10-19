@@ -14,11 +14,11 @@
     <script async defer src="https://buttons.github.io/buttons.js"></script>
     <title>
         
-          go-context 信息传递上下文 - 个人技术博客
+          go-channel 协程间通信 - 个人技术博客
         
     </title>
 
-    <link rel="canonical" href="http://example.com/2021/10/19/go-context信息透传/">
+    <link rel="canonical" href="http://example.com/2021/03/10/go-channel协程间通信/">
 
     <!-- Bootstrap Core CSS -->
 
@@ -124,14 +124,14 @@
                             
                               <a class="tag" href="/tags/#go" title="go">go</a>
                             
-                              <a class="tag" href="/tags/#context" title="context">context</a>
+                              <a class="tag" href="/tags/#channel" title="channel">channel</a>
                             
                         </div>
-                        <h1>go-context 信息传递上下文</h1>
+                        <h1>go-channel 协程间通信</h1>
                         <h2 class="subheading"></h2>
                         <span class="meta">
                             Posted by tandd on
-                            2021-10-19
+                            2021-03-10
                         </span>
                     </div>
                 
@@ -249,80 +249,195 @@
                 col-md-10 col-md-offset-1
                 post-container">
 
-                <p>在我们的日常业务开发场景中，上下文信息对于我们也是不可或缺的，</p>
-<p>那到底啥是上下文呢？可以简单理解为，在 API 之间或者方法调用之间，所传递的除了业务参数之外的额外信息。</p>
-<p>比如，服务端接收到客户端的请求后，可以把客户端的 IP 地址和端口、客户端版本, 客户端设备、请求接收的时间、TraceID 等信息放入到上下文中, 这个上下文信息可以在后端的方法调用中层层传递。后端的业务服务除了从请求体中获取参数信息，还可以从上下文读取客户端版本, 设备相关信息, 从而支持对一些特定的版本或设备做一些特殊的逻辑来实现 兼容 和 定制化处理的需求。</p>
-<p>除此之外，在常见的请求处理链路追踪方面，我们从上下问中获取 traceId, 把服务处理的时间 + traceId 推送到全链路 Trace 服务中。Trace 服务把同一 Trace ID 的不同方法的调用顺序和调用时间展示成流程图，方便跟踪。</p>
-<h3 id="1-Go-Context-标准库"><a href="#1-Go-Context-标准库" class="headerlink" title="1. Go Context 标准库"></a>1. Go Context 标准库</h3><p>Go 标准库中的 Context 功能除了提供基础的信息传递，它还提供了超时（Timeout）和取消（Cancel）的机制。</p>
-<p>context 的一些常用使用场景:</p>
-<ul>
-<li>上下文信息传递 （request-scoped），比如处理 http 请求、在请求处理链路上传递信息.</li>
-<li>控制子 goroutine 的运行.</li>
-<li>超时控制的方法调用.</li>
-<li>可以取消的方法调用。</li>
-</ul>
-<h4 id="1-1-Context-基本使用方法"><a href="#1-1-Context-基本使用方法" class="headerlink" title="1.1 Context 基本使用方法"></a>1.1 Context 基本使用方法</h4><p>context包,  定义了 Context 接口。包括 4 个方法，分别是 Deadline、Done、Err 和 Value，如下所示：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">type Context interface &#123;</span><br><span class="line">	Deadline() (deadline time.Time, ok bool)</span><br><span class="line">	Done() &lt;-chan struct&#123;&#125;</span><br><span class="line">	Err() error</span><br><span class="line">	Value(key interface&#123;&#125;) interface&#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+                <h3 id="1-Channel-的背景和用途"><a href="#1-Channel-的背景和用途" class="headerlink" title="1. Channel 的背景和用途"></a>1. Channel 的背景和用途</h3><p>对于并发场景的编程, Go 除了提供了一些通用的并发原语(如sync 包的mutex condition)， 还提供了基于 goroutine + channel 模式作为另一种选择。</p>
+<p>Channel 是 Go 语言内置的类型，主要用于解决 go goroutine 之间的通行问题。 这种通信方式源于 CSP。</p>
+<p>CSP 是 Communicating Sequential Process 的简称，也叫通信顺序进程，用来描述并发系统中进行交互的一种模式。 最早以前是在 erlang 中见到， 这种消息通行模型。 各个执行单元(线程/协程)间不直接通信, 只能通过 mailbox (邮箱包) 的方式来传递消息。 这样就不存在 竞争race 问题。</p>
+<p>之前看 go 官方介绍 channel 的资料有有这样一句，印象深刻。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Don’t communicate by sharing memory, share memory by communicating.</span><br></pre></td></tr></table></figure>
 
-<p><strong>Deadline</strong> 方法: 返回 Context 被取消的截止日期。如果没有设置截止日期，ok 的值是 false。</p>
-<p><strong>Done</strong>  方法: 返回一个 Channel 对象。在 Context 被取消时，此 Channel 会被 close，如果没被取消，可能会返回 nil。</p>
-<p><code>注: 如果 Done 返回的 Channel 对象，没有被 close，Err 方法返回 nil；如果 Done 被 close，Err 方法会返回 Done 被 close 的原因。</code></p>
-<p><strong>Value</strong> 方法:  返回此 Context 中和指定的 key 相关联的 value。</p>
-<p>常用的两个生成空 Context 的方法, context.Background, context.TODO, 两者的底层实现都是一样的， 返回一个非 nil 的, 空 Context, 没有任何值, 不会被 cancel, 不会超时，没有截止日期。 <font color=red> 推荐直接使用 context.Background.</font></p>
-<h3 id="2-特殊用途-Context"><a href="#2-特殊用途-Context" class="headerlink" title="2. 特殊用途 Context"></a>2. 特殊用途 Context</h3><p>标准库中还有几种创建特殊用途 Context 的方法, 简化我们的使用成本:</p>
-<ul>
-<li>WithValue</li>
-<li>WithCancel</li>
-<li>WithTimeout</li>
-<li>WithDeadline</li>
-</ul>
-<h4 id="2-1-WithValue"><a href="#2-1-WithValue" class="headerlink" title="2.1 WithValue"></a>2.1 WithValue</h4><p>WithValue 基于 parent 的 Context 生成一个新的 Context，保存了一个key-value 键值对。它常常用来传递上下文。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">type valueCtx struct &#123;</span><br><span class="line">	Context</span><br><span class="line">	key, val interface&#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>valueCtx 有一个自己的 key-value 键值对，还持有 parent 的 Context。它重写了 Value 方法，优先从自己的存储中检查这个 key，不存在的话会从 parent 中继续检查。 从而实现了链式查找。</p>
-<h4 id="2-2-WithCancel"><a href="#2-2-WithCancel" class="headerlink" title="2.2 WithCancel"></a>2.2 WithCancel</h4><p>WithCancel 方法返回 parent 的副本，只是副本中的 Done Channel 是新建的对象，它的类型是 cancelCtx。</p>
-<p>我们常常在一些需要主动取消长时间的任务时，创建这种类型的 Context，把这个 Context 传给执行任务的 goroutine。当需要中止任务时，我们就可以 cancel 这个 Context，这样长时间执行任务的 goroutine，就可以通过检查这个 Context，知道 Context 已经被取消了。</p>
-<p><code>注: 不是只有中途放弃，才去调用 cancel，任务正常完成，也需要调用 cancel，这样，这个 Context 才能释放它的资源（通知它的 children 处理 cancel，从它的 parent 中把自己移除，甚至释放相关的 goroutine）。</code></p>
-<p>WithCancel 方法的实现代码：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">func WithCancel(parent Context) (ctx Context, cancel CancelFunc) &#123;</span><br><span class="line">	if parent == nil &#123;</span><br><span class="line">		panic(&quot;cannot create context from nil parent&quot;)</span><br><span class="line">	&#125;</span><br><span class="line">	c := newCancelCtx(parent)</span><br><span class="line">	propagateCancel(parent, &amp;c)</span><br><span class="line">	return &amp;c, func() &#123; c.cancel(true, Canceled) &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">// newCancelCtx returns an initialized cancelCtx.</span><br><span class="line">func newCancelCtx(parent Context) cancelCtx &#123;</span><br><span class="line">	return cancelCtx&#123;Context: parent&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>代码中调用的 propagateCancel 方法会顺着 parent 路径往上找，直到找到一个 cancelCtx，或者为 nil。如果不为空，就把自己加入到这个 cancelCtx 的 child，以便这个 cancelCtx 被取消的时候通知自己。如果为空，会新起一个 goroutine，由它来监听 parent 的 Done 是否已关闭。</p>
-<p>当这个 cancelCtx 的 cancel 函数被调用的时候，或者 parent 的 Done 被 close 的时候，这个 cancelCtx 的 Done 才会被 close。</p>
-<p>cancel 是向下传递的，如果一个 WithCancel 生成的 Context 被 cancel 时。parent Context 不会因为子 Context 被 cancel 而 cancel。</p>
-<p>cancelCtx 被取消时，它的 Err 字段就是下面这个 Canceled 错误：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">var Canceled = errors.New(&quot;context canceled&quot;)</span><br></pre></td></tr></table></figure>
-
-<h4 id="2-3-WithTimeout"><a href="#2-3-WithTimeout" class="headerlink" title="2.3 WithTimeout"></a>2.3 WithTimeout</h4><p>WithTimeout 和 WithDeadline 一样，只不过一个参数是超时时间，一个参数是截止时间。超时时间加上当前时间，其实就是截止时间，<br>WithTimeout 的实现代码是：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">func WithTimeout(parent Context, timeout time.Duration) (Context, CancelFunc) &#123;</span><br><span class="line">	return WithDeadline(parent, time.Now().Add(timeout))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-
-<h4 id="2-4-WithDeadline"><a href="#2-4-WithDeadline" class="headerlink" title="2.4 WithDeadline"></a>2.4 WithDeadline</h4><p>WithDeadline 会返回一个 parent 的副本，并且设置了一个不晚于参数 d 的截止时间，类型为 timerCtx（或者是 cancelCtx）。</p>
-<p>如果它的截止时间晚于 parent 的截止时间，那么就以 parent 的截止时间为准，并返回一个类型为 cancelCtx 的 Context，因为 parent 的截止时间到了，就会取消这个 cancelCtx。</p>
-<p>如果当前时间已经超过了截止时间，就直接返回一个已经被 cancel 的 timerCtx。否则就会启动一个定时器，到截止时间取消这个 timerCtx。</p>
-<p>综合起来，timerCtx 的 Done 被 Close 掉，主要是由下面的某个事件触发的：</p>
-<ul>
-<li>时间到了</li>
-<li>cancel 函数被调用</li>
-<li>parent 的 Done 被 close</li>
-</ul>
-<p>WithDeadline 方法的代码实现：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">func WithDeadline(parent Context, d time.Time) (Context, CancelFunc) &#123;</span><br><span class="line">	if parent == nil &#123;</span><br><span class="line">		panic(&quot;cannot create context from nil parent&quot;)</span><br><span class="line">	&#125;</span><br><span class="line">    // 如果parent 的截止时间更早，则直接返回一个 CancelCtx</span><br><span class="line">	if cur, ok := parent.Deadline(); ok &amp;&amp; cur.Before(d) &#123;</span><br><span class="line">		// The current deadline is already sooner than the new one.</span><br><span class="line">		return WithCancel(parent)</span><br><span class="line">	&#125;</span><br><span class="line">	c := &amp;timerCtx&#123;</span><br><span class="line">		cancelCtx: newCancelCtx(parent),</span><br><span class="line">		deadline:  d,</span><br><span class="line">	&#125;</span><br><span class="line">    //向上游传播 当前 context, 当上游 context 关闭下，通知当前 context 关闭。</span><br><span class="line">	propagateCancel(parent, c)</span><br><span class="line">	dur := time.Until(d)</span><br><span class="line">    //如果超时时间，小于当前, 返回  cancel</span><br><span class="line">	if dur &lt;= 0 &#123;</span><br><span class="line">		c.cancel(true, DeadlineExceeded) // deadline has already passed</span><br><span class="line">		return c, func() &#123; c.cancel(false, Canceled) &#125;</span><br><span class="line">	&#125;</span><br><span class="line">	c.mu.Lock()</span><br><span class="line">	defer c.mu.Unlock()</span><br><span class="line">	if c.err == nil &#123;</span><br><span class="line">        // 设置一个定时器, 截止时间调用 cancel 函数。</span><br><span class="line">		c.timer = time.AfterFunc(dur, func() &#123;</span><br><span class="line">			c.cancel(true, DeadlineExceeded)</span><br><span class="line">		&#125;)</span><br><span class="line">	&#125;</span><br><span class="line">	return c, func() &#123; c.cancel(true, Canceled) &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="3-总结"><a href="#3-总结" class="headerlink" title="3. 总结"></a>3. 总结</h3><p><strong>context 使用过程中需要关注点:</strong> </p>
+<p>我理解 communicate by sharing memory 和 share memory by communicating 是两种不同的并发处理模式。</p>
+<p>communicate by sharing memory: 传统的并发编程处理方式，指在对共享的数据进行操作时需要先获取锁, 在可以执行数据操作，否则就会有 data race 问题。</p>
+<p>share memory by communicating: CSP 模型的通信方式。 一个 goroutine 可以把 数据本身或数据的访问方式 给其它 goroutine。 (可以理解为 channel 中的数据，同一时间只会被一个 goroutine 处理。)</p>
+<p>channel 常用使用场景:</p>
 <ol>
-<li>context 的 cancel 传递特性是单向的, 只向下传递，而不向上传递。 对于树状的 context 层级，提供了一种 context 批量管理的能力。</li>
-<li>cancel context 在正常完成的情况下也是需要关闭。</li>
+<li>有锁队列: 支持并发操作的的 buffer 或者 queue，解决生产者 - 消费者问题。多个 goroutine 可以并发当作生产者（Producer）和消费者（Consumer）。</li>
+<li>数据传输: 一个 goroutine 将处理好的数据交给另一个 goroutine, 进行下一步的处理。</li>
+<li>信号通知: 可以将信号(closing、closed、data ready 等) 传递给另一个 goroutine, 来完成通知的操作， 如服务优雅关闭。</li>
+<li>协程池管理: 让一组 goroutine 按照一定的顺序并发或者串行的执行，</li>
 </ol>
-<p><strong>在使用上下文的时候，养成的一些良好的习惯:</strong> </p>
-<ul>
-<li>函数在有 Context 的时候，把 context 参数放到参数列表的第一个位置。</li>
-<li>在函数调用需要 Context 参数, 但当前函数没有 Context 的时候, 可以使用 context.Background() 创建一个空的上下文对象，不要使用 nil。</li>
-<li>Context 做做函数之间的上下文透传，不能缓存 Context </li>
-</ul>
+<h3 id="1-Channel-基本用法"><a href="#1-Channel-基本用法" class="headerlink" title="1. Channel 基本用法"></a>1. Channel 基本用法</h3><p>channel 按照对 接受，发送的支持分为三种类型:</p>
+<ol>
+<li>仅支持接收。      chan&lt;- string</li>
+<li>仅支持发送。      &lt;-chan string </li>
+<li>支持发送和接受。   chan string</li>
+</ol>
+<p>chan 中的元素可以是任意类型。 &lt;- 总是尽量和左边的 chan 结合。<br>chan 默认是 nil, 我们需要手动初始化通过 make(chan string, len)， 我们可以通过设置 len, 来设置容 chan 容量。</p>
+<p>len 等于 0    : unbuffer chan, 只有读写两边都 ready 后才不会阻塞。<br>len 非等于 0  : buffered chan, 如果 chan 中还有数据，从这个 chan 接收数据的时候就不会阻塞，如果 chan 还未满（“满”指达到其容量），给它发送数据也不会阻塞，否则会阻塞。</p>
+<p><code>注意：nil 是 chan 的零值，是一种特殊的 chan，对值是 nil 的 chan 的发送接收调用者总是会阻塞。</code></p>
+<p>chan 的常见读取方式：</p>
+<ol>
+<li>select case </li>
+<li>for range</li>
+</ol>
+<h3 id="2-Channel-实现原理"><a href="#2-Channel-实现原理" class="headerlink" title="2. Channel 实现原理"></a>2. Channel 实现原理</h3><p>channel 结构体主要字段, 如下表：</p>
+<table>
+<thead>
+<tr>
+<th>字段名称</th>
+<th>描述</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>qcount  int</td>
+<td>循环队列中元素的数量</td>
+<td>可以简单理解为 buffer chan 中未消费元素的数量</td>
+</tr>
+<tr>
+<td>dataqsiz uint</td>
+<td>循环队列大小</td>
+<td>可以简单理解为 buffer chan 的容量</td>
+</tr>
+<tr>
+<td>buf unsafe.Pointer</td>
+<td>循环队列的指针</td>
+<td>执行存储 buffer chan 数据的循环队列</td>
+</tr>
+<tr>
+<td>elemsize uint16</td>
+<td>chan 中数据类型对象的大小</td>
+<td>在 buf 计算需要申请内存大小时需要用到</td>
+</tr>
+<tr>
+<td>closed uint32</td>
+<td>是否已关闭</td>
+<td>closed !=0 表示 channel 已关闭</td>
+</tr>
+<tr>
+<td>elemtype *_type</td>
+<td>chan 中的数据类型</td>
+<td>在返回默认值的时候需要用到</td>
+</tr>
+<tr>
+<td>sendx uint16</td>
+<td>待 send 元素在 循环队列中的下标</td>
+<td>指向在循环队列中第一个待下发元素的位置下标(buffer channel中使用)</td>
+</tr>
+<tr>
+<td>recvx uint16</td>
+<td>下一个 recv 元素在 循环队列中的下标</td>
+<td>指向在循队列中中第一个可以接受元素的位置的下表。(buffer channel中使用)</td>
+</tr>
+<tr>
+<td>recvq waitq</td>
+<td>recviver 的等待队列</td>
+<td>block 在 这个 channel 的 recv  goroutine</td>
+</tr>
+<tr>
+<td>sendq waitq</td>
+<td>sender 的等待队列</td>
+<td>block 在 这个 channel 的 send  goroutine</td>
+</tr>
+<tr>
+<td>locker mutex</td>
+<td>互斥锁</td>
+<td>保护 chan 内部数据的修改的</td>
+</tr>
+</tbody></table>
+<p><strong>channel send 操作:</strong> </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">unbuffer channel: send 端一直阻塞 until recv 端 ready.</span><br><span class="line">buffer   channel:</span><br><span class="line">循环队列未满: send 端操作不阻塞。正常发送数据。</span><br><span class="line">循环队列已满: send 端阻塞, 直到有新接收端。</span><br></pre></td></tr></table></figure>
+
+<p><strong>channel recv 操作:</strong> </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">unbuffer channel: recv 端一直阻塞 until send 端 ready.</span><br><span class="line">buffer channel:</span><br><span class="line">循环队列空:      recv 端阻塞, 直到有新接收端。</span><br><span class="line">循环队列不为空:   recv 端不阻塞, 正常获取数据。</span><br></pre></td></tr></table></figure>
+
+
+<p><strong>channel close 操作:</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">unbuffer/buffer channel:  block 在 chan 的 recv 端返回 chan 元素的默认值。</span><br><span class="line">block 在 chan 的 send 端 panic</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>send/recv/close 操作导致的 block 和 panic 状况梳理(<font color=red>buffer chan</font>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>chan nil</th>
+<th>chan empty</th>
+<th>chan full</th>
+<th>not full and not empty</th>
+<th>closed</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>receive</td>
+<td>block</td>
+<td>block</td>
+<td>read normal</td>
+<td>read valie</td>
+<td>读 未读取的数据</td>
+</tr>
+<tr>
+<td>send</td>
+<td>block</td>
+<td>write normal</td>
+<td>block</td>
+<td>write value</td>
+<td>panic</td>
+</tr>
+<tr>
+<td>close</td>
+<td>block</td>
+<td>closed</td>
+<td>closed, 有未读值</td>
+<td>closed, 有未读值</td>
+<td>panic</td>
+</tr>
+</tbody></table>
+<p><strong>send/recv/close 操作导致的 block 和 panic 状况梳理(<font color=red>unbuffer chan</font>):</strong></p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>chan nil</th>
+<th>chan ready</th>
+<th>closed</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>receive</td>
+<td>block</td>
+<td>read block until send ready</td>
+<td>数据类型零值, false</td>
+</tr>
+<tr>
+<td>send</td>
+<td>block</td>
+<td>send block until recv ready</td>
+<td>panic</td>
+</tr>
+<tr>
+<td>close</td>
+<td>block</td>
+<td>closed</td>
+<td>panic</td>
+</tr>
+</tbody></table>
+<h3 id="3-其它"><a href="#3-其它" class="headerlink" title="3. 其它"></a>3. 其它</h3><p><strong>channel 在日常开发使用的场景:</strong></p>
+<ol>
+<li>共享资源的并发访问使用传统并发原语</li>
+<li>协程间的消息传递使用 Channel</li>
+<li>任务编排和任务并发执行用 WaitGroup, pool 等更高维度组件。</li>
+</ol>
 
                 
 
                 <hr>
                 <!-- Pager -->
                 <ul class="pager">
+                    
+                        <li class="previous">
+                            <a href="/2021/03/19/go-context信息透传/" data-toggle="tooltip" data-placement="top" title="go-context 信息传递上下文">&larr; Previous post</a>
+                        </li>
                     
                     
                         <li class="next">
@@ -378,7 +493,7 @@
                        
                           <a class="tag" href="/tags/#go" title="go">go</a>
                         
-                          <a class="tag" href="/tags/#context" title="context">context</a>
+                          <a class="tag" href="/tags/#channel" title="channel">channel</a>
                         
                     </div>
                 </section>
@@ -553,7 +668,7 @@
 <script>
     // only load tagcloud.js in tag.html
     if($('#tag_cloud').length !== 0){
-        async("http://example.com/2021/10/19/go-context%E4%BF%A1%E6%81%AF%E9%80%8F%E4%BC%A0/index.html/js/jquery.tagcloud.js",function(){
+        async("http://example.com/2021/03/10/go-channel%E5%8D%8F%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1/index.html/js/jquery.tagcloud.js",function(){
             $.fn.tagcloud.defaults = {
                 //size: {start: 1, end: 1, unit: 'em'},
                 color: {start: '#bbbbee', end: '#0085a1'},
