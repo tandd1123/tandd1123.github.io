@@ -7,7 +7,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="记录个人一些日常的技术文章和分享">
+    <meta name="description" content="记录一些个人日常学习的技术文章和分享">
     <meta name="keyword"  content="">
     <link rel="shortcut icon" href="/img/ironman-draw.png">
     <!-- Place this tag in your head or just before your close body tag. -->
@@ -123,7 +123,7 @@
                     <div class="site-heading"  style="padding:40px">
                         <h1>Tandd</h1>
                         <!--<hr class="small">-->
-                        <span class="subheading">记录个人一些日常的技术文章和分享</span>
+                        <span class="subheading">记录一些个人日常学习的技术文章和分享</span>
                     </div>
                 
                 
@@ -250,9 +250,9 @@
 
 
 <div class="w3-row-padding">
-	<a href="/2021/03/19/go-context信息透传/">
+	<a href="/2021/03/19/go-channel协程间通信/">
         <h2 class="post-title">
-            go-context 信息传递上下文
+            go-channel 协程间通信
         </h2>
         <h3 class="post-subtitle">
             
@@ -261,12 +261,12 @@
 
 <div>
 
-    <a href="/2021/03/19/go-context信息透传/">
+    <a href="/2021/03/19/go-channel协程间通信/">
 
         <div class="post-content-preview">
-            在我们的日常业务开发场景中，上下文信息对于我们也是不可或缺的，
-那到底啥是上下文呢？可以简单理解为，在 API 之间或者方法调用之间，所传递的除了业务参数之外的额外信息。
-比如，服务端接收到客户端的请求后，可以把客户端的 IP 地址和端口、客户端版本, 客户端设备、请求接收的时间、TraceID 等信息放入到上下文中, 这个上下文信息可以在后端的方法调用中层层传递。后端的业务服务除了从.........
+            1. Channel 的背景和用途对于并发场景的编程, Go 除了提供了一些通用的并发原语(如sync 包的mutex condition)， 还提供了基于 goroutine + channel 模式作为另一种选择。
+Channel 是 Go 语言内置的类型，主要用于解决 go goroutine 之间的通行问题。 这种通信方式源于 CSP。
+CSP 是 Communicating .........
         </div>
     </a>
     
@@ -282,9 +282,9 @@
 
 
 <div class="w3-row-padding">
-	<a href="/2021/03/10/go-channel协程间通信/">
+	<a href="/2021/03/10/go-context信息透传/">
         <h2 class="post-title">
-            go-channel 协程间通信
+            go-context 信息传递上下文
         </h2>
         <h3 class="post-subtitle">
             
@@ -293,18 +293,61 @@
 
 <div>
 
-    <a href="/2021/03/10/go-channel协程间通信/">
+    <a href="/2021/03/10/go-context信息透传/">
 
         <div class="post-content-preview">
-            1. Channel 的背景和用途对于并发场景的编程, Go 除了提供了一些通用的并发原语(如sync 包的mutex condition)， 还提供了基于 goroutine + channel 模式作为另一种选择。
-Channel 是 Go 语言内置的类型，主要用于解决 go goroutine 之间的通行问题。 这种通信方式源于 CSP。
-CSP 是 Communicating .........
+            在我们的日常业务开发场景中，上下文信息对于我们也是不可或缺的，
+那到底啥是上下文呢？可以简单理解为，在 API 之间或者方法调用之间，所传递的除了业务参数之外的额外信息。
+比如，服务端接收到客户端的请求后，可以把客户端的 IP 地址和端口、客户端版本, 客户端设备、请求接收的时间、TraceID 等信息放入到上下文中, 这个上下文信息可以在后端的方法调用中层层传递。后端的业务服务除了从.........
         </div>
     </a>
     
         <p class="post-meta">
             Posted by tandd on
             2021-03-10
+        </p>
+    
+
+</div>
+</div>
+<hr>
+
+
+<div class="w3-row-padding">
+	<a href="/2021/01/05/go-mutex并发控制/">
+        <h2 class="post-title">
+            go-mutex 锁的实现原理
+        </h2>
+        <h3 class="post-subtitle">
+            
+        </h3>
+	</a>
+
+<div>
+
+    <a href="/2021/01/05/go-mutex并发控制/">
+
+        <div class="post-content-preview">
+            
+1. 使用场景和用法
+2. 具体实现
+2.1 Locker 接口
+2.2 Mutex 结构体
+2.3 Mutex Locker 方法
+2.4 Mutex Unlock 方法
+2.5 其它
+
+
+3. 总结
+4. 其它
+
+1. 使用场景和用法mutex 属于比较容易理解的一类用来处理共享资源 data-race 问题的同步原语。(即共享资源 存在 读写。写写的并发操作)。使用时由 mut.........
+        </div>
+    </a>
+    
+        <p class="post-meta">
+            Posted by tandd on
+            2021-01-05
         </p>
     
 
@@ -535,11 +578,19 @@ CSP 是 Communicating .........
             
         
             
-            <a href="/tags/#go" title="go" rel="2">go</a>
+            <a href="/tags/#go" title="go" rel="3">go</a>
             
         
             
             <a href="/tags/#channel" title="channel" rel="1">channel</a>
+            
+        
+            
+            <a href="/tags/#context" title="context" rel="1">context</a>
+            
+        
+            
+            <a href="/tags/#mutex" title="mutex" rel="1">mutex</a>
             
         
             
@@ -552,10 +603,6 @@ CSP 是 Communicating .........
         
             
             <a href="/tags/#memcached" title="memcached" rel="1">memcached</a>
-            
-        
-            
-            <a href="/tags/#context" title="context" rel="1">context</a>
             
         
             
@@ -639,11 +686,15 @@ CSP 是 Communicating .........
     <ul>
       
         <li>
-          <a href="/2021/03/19/go-context%E4%BF%A1%E6%81%AF%E9%80%8F%E4%BC%A0/">go-context 信息传递上下文</a>
+          <a href="/2021/03/19/go-channel%E5%8D%8F%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1/">go-channel 协程间通信</a>
         </li>
       
         <li>
-          <a href="/2021/03/10/go-channel%E5%8D%8F%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1/">go-channel 协程间通信</a>
+          <a href="/2021/03/10/go-context%E4%BF%A1%E6%81%AF%E9%80%8F%E4%BC%A0/">go-context 信息传递上下文</a>
+        </li>
+      
+        <li>
+          <a href="/2021/01/05/go-mutex%E5%B9%B6%E5%8F%91%E6%8E%A7%E5%88%B6/">go-mutex 锁的实现原理</a>
         </li>
       
         <li>
@@ -654,10 +705,6 @@ CSP 是 Communicating .........
           <a href="/2019/10/12/centos-systemctl%E7%AE%A1%E7%90%86%E7%94%A8%E6%88%B7%E6%9C%8D%E5%8A%A1/">Systemctl 管理用户服务</a>
         </li>
       
-        <li>
-          <a href="/2019/07/25/openresty-cosocket%E6%89%A9%E5%B1%95memcached%E6%9C%8D%E5%8A%A1/">基于 Openresty cosocket 实现 memcached 服务</a>
-        </li>
-      
     </ul>
   </div>
 
@@ -666,7 +713,7 @@ CSP 是 Communicating .........
         
     <h5>Achives</h5>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">March 2021</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">December 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">October 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">July 2019</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">March 2019</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/03/">March 2021</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/01/">January 2021</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/12/">December 2020</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/10/">October 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/07/">July 2019</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">March 2019</a><span class="archive-list-count">1</span></li></ul>
     </div>
 
         <hr>

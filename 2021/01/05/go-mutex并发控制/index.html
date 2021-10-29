@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Head tag -->
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="记录一些个人日常学习的技术文章和分享">
+    <meta name="keyword"  content="">
+    <link rel="shortcut icon" href="/img/ironman-draw.png">
+    <!-- Place this tag in your head or just before your close body tag. -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+    <title>
+        
+          go-mutex 锁的实现原理 - 个人技术博客
+        
+    </title>
+
+    <link rel="canonical" href="http://example.com/2021/01/05/go-mutex并发控制/">
+
+    <!-- Bootstrap Core CSS -->
+
+   
+<link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.4.1/css/bootstrap.min.css">
+
+
+    
+
+    <!-- Custom CSS --> 
+    
+<link rel="stylesheet" href="/css/beantech.min.css">
+
+
+    
+<link rel="stylesheet" href="/css/donate.css">
+
+	
+<link rel="stylesheet" href="/css/w3.css">
+
+    <!-- Pygments Highlight CSS -->
+    
+<link rel="stylesheet" href="/css/highlight.css">
+
+
+    
+<link rel="stylesheet" href="/css/widget.css">
+
+
+    
+<link rel="stylesheet" href="/css/rocket.css">
+
+
+    
+<link rel="stylesheet" href="/css/signature.css">
+
+
+    
+<link rel="stylesheet" href="/css/toc.css">
+
+
+    <!-- Custom Fonts -->
+    <!-- <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" type="text/css"> -->
+    <!-- Hux change font-awesome CDN to qiniu -->
+    <link href="https://cdn.staticfile.org/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+
+
+    <!-- Hux Delete, sad but pending in China
+    <link href='http://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/
+    css'>
+    -->
+
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+	
+
+    <!-- ga & ba script hoook -->
+    <script></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="">
+	<!-- Modified by Yu-Hsuan Yen -->
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header{
+    }
+   .post-heading{
+    padding:20px;
+    }
+  .person {
+    border: 10px solid transparent;
+    margin-bottom: 25px;
+    width: 80%;
+    height: 80%;
+    opacity: 0.7;
+  }
+  .person:hover {
+    border-color: #f1f1f1;
+  }
+
+</style>
+
+<header id="headerid" class="w3-indigo intro-header" style="position:relative;">
+    <!-- Signature -->
+	
+        <div class="container">
+            <div class=" row" >
+			
+			<canvas id="particles-js-canvas" style="position:absolute;z-index:1;top:0px;left:0px;" width="100%" height="50%"></canvas>
+			
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1" style="z-index:2;">
+                
+                    <div class="post-heading" style="padding:40px">
+                        <div class="tags">
+                            
+                              <a class="tag" href="/tags/#go" title="go">go</a>
+                            
+                              <a class="tag" href="/tags/#mutex" title="mutex">mutex</a>
+                            
+                        </div>
+                        <h1>go-mutex 锁的实现原理</h1>
+                        <h2 class="subheading"></h2>
+                        <span class="meta">
+                            Posted by tandd on
+                            2021-01-05
+                        </span>
+                    </div>
+                
+                </div>
+            </div>
+        </div>
+  
+</header>
+
+	
+    <!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Tandd</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <!-- Known Issue, found by Hux:
+            <nav>'s height woule be hold on by its content.
+            so, when navbar scale out, the <nav> will cover tags.
+            also mask any touch event of tags, unfortunately.
+        -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a  href="/">Homepage</a>
+                    </li>
+		    
+                    
+
+                        
+                        <li>
+           
+                            <a  href="#">menu1</a>
+                           
+                        </li>
+                        
+                    
+
+                        
+                        <li>
+           
+                            <a  href="#">menu2</a>
+                           
+                        </li>
+                        
+                    
+
+                        
+                        <li>
+           
+                            <a  href="#">menu3</a>
+                           
+                        </li>
+                        
+                    
+                    
+                </ul>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    $toggle.addEventListener('click', handleMagic)
+    function handleMagic(e){
+        if ($navbar.className.indexOf('in') > 0) {
+        // CLOSE
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        }else{
+        // OPEN
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+</script>
+
+
+    <!-- Main Content -->
+    <!-- Modify by Yu-Hsuan Yen -->
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+            <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+                <ul>
+<li><a href="#1-%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF%E5%92%8C%E7%94%A8%E6%B3%95">1. 使用场景和用法</a></li>
+<li><a href="#2-%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0">2. 具体实现</a><ul>
+<li><a href="#2-1-Locker-%E6%8E%A5%E5%8F%A3">2.1 Locker 接口</a></li>
+<li><a href="#2-2-Mutex-%E7%BB%93%E6%9E%84%E4%BD%93">2.2 Mutex 结构体</a></li>
+<li><a href="#2-3-Mutex-Locker-%E6%96%B9%E6%B3%95">2.3 Mutex Locker 方法</a></li>
+<li><a href="#2-4-Mutex-Unlock-%E6%96%B9%E6%B3%95">2.4 Mutex Unlock 方法</a></li>
+<li><a href="#2-5-%E5%85%B6%E5%AE%83">2.5 其它</a></li>
+</ul>
+</li>
+<li><a href="#3-%E6%80%BB%E7%BB%93">3. 总结</a></li>
+<li><a href="#4-%E5%85%B6%E5%AE%83">4. 其它</a></li>
+</ul>
+<h3 id="1-使用场景和用法"><a href="#1-使用场景和用法" class="headerlink" title="1. 使用场景和用法"></a>1. 使用场景和用法</h3><p>mutex 属于比较容易理解的一类用来处理共享资源 data-race 问题的同步原语。(即共享资源 存在 读写。写写的并发操作)。<br>使用时由 mutex 提供一个互斥的临界区, 数据修改流程如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">获取 mutex 锁</span><br><span class="line">修改数据</span><br><span class="line">释放 mutex 锁</span><br></pre></td></tr></table></figure>
+<p>对数据的修改遵循这个过程循环往复。</p>
+<p><strong>基本的使用方法:</strong> </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">var m sync.Mutex</span><br><span class="line">var cnt uint32</span><br><span class="line">func Incr() &#123;</span><br><span class="line">	m.Locker()         // 获取 mutex 锁</span><br><span class="line">	defer m.Locker()   // 使用 defer 释放锁</span><br><span class="line">	cnt++              // 数据的修改</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-具体实现"><a href="#2-具体实现" class="headerlink" title="2. 具体实现"></a>2. 具体实现</h3><p>mutex 实现了公共的Locker 街口，并在 Locker, Unlocker 方法中实现了 对 mutex 的加锁 和 解锁操作。</p>
+<h4 id="2-1-Locker-接口"><a href="#2-1-Locker-接口" class="headerlink" title="2.1 Locker 接口"></a>2.1 Locker 接口</h4><p>locker 接口抽象出了两个接口， Locker, Unlocker 操作, 用于表示对象是否可以锁住/释放.<br>代码如下图:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">// A Locker represents an object that can be locked and unlocked.</span><br><span class="line">type Locker interface &#123;</span><br><span class="line">    Lock()</span><br><span class="line">    Unlock()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-2-Mutex-结构体"><a href="#2-2-Mutex-结构体" class="headerlink" title="2.2 Mutex 结构体"></a>2.2 Mutex 结构体</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">//Mutex 是一个排他缩, 零值的情况表示一个没有被锁住的 mutex.</span><br><span class="line">//一直好奇，mutex 不需要初始化，原来内部的数据结构是值类型的常见类型。</span><br><span class="line">type Mutex struct &#123;</span><br><span class="line">    state int32</span><br><span class="line">    sema  uint32</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">const (</span><br><span class="line">    mutexLocked = 1 &lt;&lt; iota //表示 mutex 是否被锁住</span><br><span class="line">    mutexWoken              //表示当前的斜程是否是从 waiter 内唤醒的协程</span><br><span class="line">    mutexStarving           //表示 mutex 当前的模式(正常，饥饿模式)</span><br><span class="line">    mutexWaiterShift = iota //等待在这个 Mutex 协程的数量</span><br><span class="line"></span><br><span class="line">    // 其他：</span><br><span class="line">    // Mutex 在 正常模式, 饥饿模式下的一些操作区别:</span><br><span class="line">    //</span><br><span class="line">    // 正常模式: 等待的协程是 FIFO 模式。 被唤醒的 goroutine 要和新加入协程去竞争。</span><br><span class="line">    // 在这种模式下，新的 goroutine 是有优势的。</span><br><span class="line">    // (此处的新的 goroutine, 未在 waiter 队列内的 goroutine)</span><br><span class="line">    // 如果一个 waiter 竞争锁失败超过 1ms, 则修改 mutex 为饥饿状态。</span><br><span class="line">    //</span><br><span class="line">    // 饥饿模式: 释放锁的 goroutine 会把 mutex 的所有权交给 waiter queue 的 goroutine.</span><br><span class="line">    // 新的 goroutine 不会去获取 Mutex 锁, 会直接把自己添加 waiter queue 中。</span><br><span class="line">    // 唤醒 goroutine 在获得 mutex 的所有权, 在以下情形会把 mutex 设置为正常模式。</span><br><span class="line">    // 1. 当前 goroutine 是 waiter queue 的最后一个 goroutine.</span><br><span class="line">    // 2. waiter queue 的第一个 goroutine 的等待时间少于 1ms</span><br><span class="line">    // </span><br><span class="line">    //</span><br><span class="line">    // wait queue 中 goroutine, 在 normal 模式下最大等待时间的阀值, </span><br><span class="line">    // 超过这个时间 Mutex 被设置为 starving 模式。</span><br><span class="line">    starvationThresholdNs = 1e6</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p><strong>正常模式:</strong> 有助于提升性能。新到的 goroutine 在 waiter queue 内不为空的情况下, 也可能获取 mutex 所有权。<br><strong>正常模式:</strong> 主要是为了防止 wait queue 中的 goroutine 一直获取不到 Mutex 的锁, 而一直处于等待状态。</p>
+<h4 id="2-3-Mutex-Locker-方法"><a href="#2-3-Mutex-Locker-方法" class="headerlink" title="2.3 Mutex Locker 方法"></a>2.3 Mutex Locker 方法</h4><p>对 Mutex 对象执行解锁操作, 主要也是由 fast path, slow path 方法构成。<br>fast path: 对于 mutex  的 status 为 0 的情况，直接加锁返回， 无需 block<br>slow path: 针对 normal. starving 模式， 提供不同的加锁控制逻辑。</p>
+<p><strong>Locker  函数入口:</strong> </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">func (m *Mutex) Lock() &#123;</span><br><span class="line">    // fast path: 释放 mutex, 无需 block</span><br><span class="line">    if atomic.CompareAndSwapInt32(&amp;m.state, 0, mutexLocked) &#123;</span><br><span class="line">        return</span><br><span class="line">    &#125;</span><br><span class="line">    // slow path: 需要和 waiter queue 内的 goroutine 竞争</span><br><span class="line">    m.lockSlow()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>lockSlow 韩束:</strong> </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br></pre></td><td class="code"><pre><span class="line">func (m *Mutex) lockSlow() &#123;</span><br><span class="line">    var waitStartTime int64  // 记录 goroutine 等待的时间。</span><br><span class="line">    starving := false        // 当前的 goroutine 是否处于 starving 状态</span><br><span class="line">    awoke := false           // 是否是被唤醒</span><br><span class="line">    iter := 0                // spin iter 重试次数</span><br><span class="line">    old := m.state           // 保存旧的 state</span><br><span class="line">    for &#123;</span><br><span class="line">        //在 Mutex 处于正常模式下，进行 span 操作。争夺 wakeMutex 标记位</span><br><span class="line">        if old&amp;(mutexLocked|mutexStarving) == mutexLocked &amp;&amp; \</span><br><span class="line">           runtime_canSpin(iter) &#123;</span><br><span class="line">            // 新的 goroutine 会和 waiter queue 的 goroutine 竞争 mutexWoken 标记位。</span><br><span class="line">            // 设置了 mutexWoken 标记位后可以阻止 waiter queue 里面的 goroutine 被唤醒。</span><br><span class="line">            // 注意此处仅设置 state 的 wakeMutex 标记位。</span><br><span class="line">            if !awoke &amp;&amp; old&amp;mutexWoken == 0 &amp;&amp; old&gt;&gt;mutexWaiterShift != 0 &amp;&amp;</span><br><span class="line">                atomic.CompareAndSwapInt32(&amp;m.state, old, old|mutexWoken) &#123;</span><br><span class="line">                awoke = true</span><br><span class="line">            &#125;</span><br><span class="line">            runtime_doSpin()</span><br><span class="line">            iter++</span><br><span class="line">            old = m.state</span><br><span class="line">            continue</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        //构造 &amp;&amp; 设置 state 字段</span><br><span class="line">        new := old</span><br><span class="line">        //如果 mutex 是正常模式， 则仅设置 mutexLocked，</span><br><span class="line">        //不论此时的 mutex 是未加锁的, 已加锁状态。最后都是 mutexLocked 加锁状态。</span><br><span class="line">        if old&amp;mutexStarving == 0 &#123;</span><br><span class="line">            new |= mutexLocked</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        //如果 mutex 的 mutexLocked,  mutexStarving 值不为 0。 </span><br><span class="line">        //都会将 wait goroutine 数量 + 1</span><br><span class="line">        if old&amp;(mutexLocked|mutexStarving) != 0 &#123;</span><br><span class="line">            new += 1 &lt;&lt; mutexWaiterShift</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        //在 starving(true) 和 mutex(mutexLocked) 的情况下 </span><br><span class="line">        //切换设置 mutex 状态为 starving</span><br><span class="line">        if starving &amp;&amp; old&amp;mutexLocked != 0 &#123;</span><br><span class="line">            new |= mutexStarving</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        //重置 mutexWake 状态, 为 false.</span><br><span class="line">        if awoke &#123;</span><br><span class="line">            if new&amp;mutexWoken == 0 &#123;</span><br><span class="line">                throw(&quot;sync: inconsistent mutex state&quot;)</span><br><span class="line">            &#125;</span><br><span class="line">            new &amp;^= mutexWoken</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        //执行真正的设置 state 状态, 原子操作。</span><br><span class="line">        if atomic.CompareAndSwapInt32(&amp;m.state, old, new) &#123;</span><br><span class="line">            //如果 mutex 是处于未加锁 &amp;&amp; 未处于饥饿模式。则加锁成功直接返回。</span><br><span class="line">            if old&amp;(mutexLocked|mutexStarving) == 0 &#123;</span><br><span class="line">                break // locked the mutex with CAS</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            //计算当前 goroutine 是否是处于 starving </span><br><span class="line">            queueLifo := waitStartTime != 0</span><br><span class="line">            if waitStartTime == 0 &#123;</span><br><span class="line">                waitStartTime = runtime_nanotime()</span><br><span class="line">            &#125;</span><br><span class="line">            //当前 goroutine 到调用信号量 acquire, block 了。</span><br><span class="line">            runtime_SemacquireMutex(&amp;m.sema, queueLifo, 1)</span><br><span class="line">            </span><br><span class="line">            //判断当前 goroutine 是否处于 starving</span><br><span class="line">            starving = starving ||\</span><br><span class="line">                runtime_nanotime()-waitStartTime &gt; starvationThresholdNs</span><br><span class="line">            old = m.state</span><br><span class="line"></span><br><span class="line">            //在 starving 模式时, 只有 wait queue的 goroutine 能获取 Mutex 的锁。</span><br><span class="line">            if old&amp;mutexStarving != 0 &#123;</span><br><span class="line">                //期望 old 的 处于未加锁， 无 woken 的状态, </span><br><span class="line">                // 并且 wait queue 的长度大于 0.</span><br><span class="line">                if old&amp;(mutexLocked|mutexWoken) != 0 || \</span><br><span class="line">				   old&gt;&gt;mutexWaiterShift == 0 &#123;</span><br><span class="line">                    throw(&quot;sync: inconsistent mutex state&quot;)</span><br><span class="line">                &#125;</span><br><span class="line">                //即: mutexLocked(加锁) + (-1 &lt;&lt; mutexWaiterShift)</span><br><span class="line">                //其中: (-1 &lt;&lt; mutexWaiterShift) =&gt; wait queue 数量 -1 </span><br><span class="line">                delta := int32(mutexLocked - 1&lt;&lt;mutexWaiterShift)</span><br><span class="line">                if !starving || old&gt;&gt;mutexWaiterShift == 1 &#123;</span><br><span class="line">                    //当前 goroutine 不再处于 starving 或 wait group 无 goroutine.</span><br><span class="line">                    delta -= mutexStarving</span><br><span class="line">                &#125;</span><br><span class="line">                atomic.AddInt32(&amp;m.state, delta)</span><br><span class="line">                //加锁成功, 推出循环。</span><br><span class="line">                break</span><br><span class="line">            &#125;</span><br><span class="line">            awoke = true</span><br><span class="line">            iter = 0</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            old = m.state</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>mutex 的 starving 状态是由， wait queue 内的 goroutine 设置的。（触发条件是多次唤醒后 与 新来的 goroutine 竞争失败，最后发现超过 starving 的时间阀值. 设置 starving ）</p>
+<p><strong>normal 模式的执行流程:</strong> </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">step1: 争夺 wakeMutex 标志位 </span><br><span class="line">新的 goroutine 会和 wait queue 中的 goroutine 争夺 state 中的 mutexWake 标记。 </span><br><span class="line">state 中的 wake 标记一旦设定, Unlocker 函数就不会再唤醒 wait queue 中 goroutine 了.</span><br><span class="line"></span><br><span class="line">step2: 构造&amp;&amp;设置 state 字段</span><br><span class="line">1. 对 mutex 加锁 设置 mutexLocked.</span><br><span class="line">2. 判断 mutex 当前 state 是否已加锁， 如果是已加锁状态则 对 wait queue num + 1</span><br><span class="line">3. reset wakeMutex 标记</span><br><span class="line">4. 执行 mutex state 的设置操作(原子操作)</span><br><span class="line">5. 检查  mutex 旧的 state, 是否是未加锁，无 starving. 如果是则返回成功。</span><br><span class="line">6. 调用 sema acquire 操作，当前 goroutine 进入到 wait queue.</span><br><span class="line">7. 被唤醒后，设置 wake 标记，并重复 步骤2。</span><br></pre></td></tr></table></figure>
+
+<p><strong>starving 模式的执行流程:</strong> </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">1. 如果 mutex 的 mutexLocked 标记不为 0，则对 wait queue num + 1</span><br><span class="line">2. 当前的 goroutine 调用 sema 进入 block 状态</span><br><span class="line">3. 被唤醒的 goroutine, 执行 mutex 的加锁操作。</span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="2-4-Mutex-Unlock-方法"><a href="#2-4-Mutex-Unlock-方法" class="headerlink" title="2.4 Mutex Unlock 方法"></a>2.4 Mutex Unlock 方法</h4><p>对 Mutex 对象进行解锁。同Locker, 解锁也有 fast path, slow path 方法。<br>fast path: 直接修改 mutex 的 mutexLocked 位的值为 0, 并返回。<br>slow path: 执行 (设置 wakeMutex + 唤醒 wait queue goroutine)操作 或 直接唤醒 wait queue 的第一个 goroutine.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">// Unlock unlocks m.</span><br><span class="line">func (m *Mutex) Unlock() &#123;</span><br><span class="line">    // Fast path: drop lock bit.</span><br><span class="line">    new := atomic.AddInt32(&amp;m.state, -mutexLocked)</span><br><span class="line">    if new != 0 &#123;</span><br><span class="line">        m.unlockSlow(new)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (m *Mutex) unlockSlow(new int32) &#123;</span><br><span class="line">    // 状态不一致检测</span><br><span class="line">    if (new+mutexLocked)&amp;mutexLocked == 0 &#123;</span><br><span class="line">        throw(&quot;sync: unlock of unlocked mutex&quot;)</span><br><span class="line">    &#125;</span><br><span class="line">    // mutex 未处于 starving 模式。</span><br><span class="line">    if new&amp;mutexStarving == 0 &#123;</span><br><span class="line">        old := new</span><br><span class="line">        for &#123;</span><br><span class="line"></span><br><span class="line">            // 检查是否需要唤醒一个 wait queue 中的 goroutine</span><br><span class="line">            // 如果满足一下条件则无需执行唤醒操作:</span><br><span class="line">            // 1. wait queue 空</span><br><span class="line">            // 2. mutex 的 mutexLocked, mutexWake, mutexStarving 的值不为空。</span><br><span class="line">            // 执行唤醒操作的步骤</span><br><span class="line">            // 1. 设置 state, (wait queue num -1, 设置 wakeMutex 值)</span><br><span class="line">            // 2. 执行具体的 runtime_Semrelease 操作。</span><br><span class="line">            if old&gt;&gt;mutexWaiterShift == 0 || \</span><br><span class="line">               old&amp;(mutexLocked|mutexWoken|mutexStarving) != 0 &#123;</span><br><span class="line">                return</span><br><span class="line">            &#125;</span><br><span class="line">            // Grab the right to wake someone.</span><br><span class="line">            new = (old - 1&lt;&lt;mutexWaiterShift) | mutexWoken</span><br><span class="line">            if atomic.CompareAndSwapInt32(&amp;m.state, old, new) &#123;</span><br><span class="line">                runtime_Semrelease(&amp;m.sema, false, 1)</span><br><span class="line">                return</span><br><span class="line">            &#125;</span><br><span class="line">            old = m.state</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        //唤醒 wait queue 内的下一个 goroutine， 不走 wake 的逻辑了。</span><br><span class="line">        runtime_Semrelease(&amp;m.sema, true, 1)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>注: mutex 并未与 goroutine 关联起来，我们可以在一个协程获取，在另一个协程释放。</code></p>
+<p>整个 Unlocker 相对于 Locker 还是比较清晰的。</p>
+<h4 id="2-5-其它"><a href="#2-5-其它" class="headerlink" title="2.5 其它"></a>2.5 其它</h4><p>Mutex 的实现理解起来还是挺繁琐, 造成这种理解上的复杂。<br>我认为主要是由一下几点造成:<br><strong>1. stat 字段聚合了多个控制位:</strong><br>为了保证 Mutex 成员修改的原子操作, Mutex 把多个控制字段集成到 state 上， 使用时采用位操作获取标记位的值。 更新则是采用 cas 方式。<br><strong>2. 子段内控制位组合多:</strong><br>修改 Mutex state 时，虽然操作是原子的，state 内部状态的组合有 5+ 种情况，需要分析。<br><strong>3. 优化锁竞争保证公平:</strong><br>Mutex 提供了 normal, starving 两种模式，来保证 fair 调度 goroutine 来获取锁。</p>
+<h3 id="3-总结"><a href="#3-总结" class="headerlink" title="3. 总结"></a>3. 总结</h3><p><strong>在使用上下文的时候，一些良好的习惯:</strong></p>
+<ol>
+<li>Mutex 的 Locker, Unlocker 不是成对出现。</li>
+<li>Mutex 不可重入。(Mutex 字段内部没有存储任何 goroutine 信息，所以不支持重入)</li>
+<li>多个Mutex 之间的死锁。 要按照固定的顺序去加锁和释放锁。按照锁竞争的激烈程度从低到高。</li>
+</ol>
+<p><code>注: 死锁的四个条件。 互斥, 持有和等待, 不可剥夺, 环路等待。</code></p>
+<h3 id="4-其它"><a href="#4-其它" class="headerlink" title="4. 其它"></a>4. 其它</h3><p><strong>参考资料:</strong><br><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/27608263">https://zhuanlan.zhihu.com/p/27608263</a></p>
+
+                
+
+                <hr>
+                <!-- Pager -->
+                <ul class="pager">
+                    
+                        <li class="previous">
+                            <a href="/2021/03/10/go-context信息透传/" data-toggle="tooltip" data-placement="top" title="go-context 信息传递上下文">&larr; Previous post</a>
+                        </li>
+                    
+                    
+                        <li class="next">
+                            <a href="/2020/12/11/vagrant-machine-扩容/" data-toggle="tooltip" data-placement="top" title="Vagrant Machine 扩容">Next post &rarr;</a>
+                        </li>
+                    
+                </ul>
+
+                <br>
+
+                <!--打赏-->
+                
+                <!--打赏-->
+
+                <br>
+                <!--分享-->
+                
+                    <div class="social-share"  data-wechat-qrcode-helper="" align="center"></div>
+                    <!--  css & js -->
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/social-share.js/1.0.16/css/share.min.css">
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/social-share.js/1.0.16/js/social-share.min.js"></script>
+                
+                <!--分享-->
+                <br>                       
+                
+                <!-- require APlayer -->
+                
+
+                <!-- disqus comment start -->
+                
+                <!-- disqus comment end -->
+
+                
+				
+            </div>
+
+            <!-- Tabe of Content -->
+            <!-- Table of Contents -->
+
+                
+            <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <!-- no hr -->
+                    <h5><a href="/tags/">Tags</a></h5>
+                    <div class="tags">
+                       
+                          <a class="tag" href="/tags/#go" title="go">go</a>
+                        
+                          <a class="tag" href="/tags/#mutex" title="mutex">mutex</a>
+                        
+                    </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+
+                    
+                        <li><a href="http://www.sumoon.com" target="_blank">ACE theme</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("https://cdn.bootcss.com/anchor-js/1.1.1/anchor.min.js",function(){
+        anchors.options = {
+          visible: 'hover',
+          placement: 'left',
+          icon: 'ℬ'
+        };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+</script>
+<style>
+    /* place left on bigger screen */
+    @media all and (min-width: 800px) {
+        .anchorjs-link{
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top : -0.1em;
+        }
+    }
+</style>
+
+
+
+    <!-- Footer -->
+    <!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <ul class="list-inline text-center">
+                
+                
+                
+
+                
+
+                
+
+                
+                    <li>
+                        <a target="_blank"  href="https://github.com/kinggozhang">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; tandd 2021 
+                    <br>
+                    Powered by <a target="_blank" rel="noopener" href="http://www.hexo.io">Hexo</a> 
+                    <span style="display: inline-block; margin: 0 5px;">
+                        <i class="fa fa-heart"></i>
+                    </span> 
+                    Theme by <a target="_blank" rel="noopener" href="https://github.com/kinggozhang/hexo-theme-ace">ACE</a> 
+					
+					
+					<i class="fa fa-eye" id="leancounter"></i>
+					
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+
+   
+<script src="https://cdn.staticfile.org/jquery/2.2.4/jquery.min.js"></script>
+
+
+
+
+<!-- Bootstrap Core JavaScript -->
+
+   
+<script src="https://cdn.staticfile.org/twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+
+
+<!-- Custom Theme JavaScript -->
+
+<script src="/js/hux-blog.min.js"></script>
+
+
+
+	
+<script src="/js/particles.js"></script>
+
+	
+<script src="/js/particles_config.js"></script>
+
+
+
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- 
+     Because of the native support for backtick-style fenced code blocks 
+     right within the Markdown is landed in Github Pages, 
+     From V1.6, There is no need for Highlight.js, 
+     so Huxblog drops it officially.
+
+     - https://github.com/blog/2100-github-pages-now-faster-and-simpler-with-jekyll-3-0  
+     - https://help.github.com/articles/creating-and-highlighting-code-blocks/    
+-->
+<!--
+    <script>
+        async("http://cdn.bootcss.com/highlight.js/8.6/highlight.min.js", function(){
+            hljs.initHighlightingOnLoad();
+        })
+    </script>
+    <link href="http://cdn.bootcss.com/highlight.js/8.6/styles/github.min.css" rel="stylesheet">
+-->
+
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async("http://example.com/2021/01/05/go-mutex%E5%B9%B6%E5%8F%91%E6%8E%A7%E5%88%B6/index.html/js/jquery.tagcloud.js",function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("https://cdn.bootcss.com/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+<!-- Google Analytics -->
+
+
+
+
+<!-- Baidu Tongji -->
+
+
+
+
+
+
+	<a id="rocket" href="#top" class=""></a>
+	<script type="text/javascript" src="/js/totop.js?v=1.0.0" async=""></script>
+    <script type="text/javascript" src="/js/toc.js?v=1.0.0" async=""></script>
+<!-- Image to hack wechat -->
+<img src="http://example.com/img/icon_wechat.png" width="0" height="0" />
+<!-- Migrate from head to bottom, no longer block render and still work -->
+
+</body>
+
+</html>
